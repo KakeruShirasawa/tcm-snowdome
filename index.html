@@ -50,8 +50,9 @@
         <canvas id="globeCanvas" aria-label="スノードームのプレビュー"></canvas>
         <div class="stage-topbar">
           <span>Glas &amp; Sockel</span>
-          <span class="hint">左右にドラッグで傾けて逆さまに ・ パーツは掴んで移動</span>
+          <span class="hint">左右にスワイプで逆さま ・ ダブルタップでもOK ・ パーツは掴んで移動</span>
         </div>
+        <div class="flip-hint" id="flipHint" aria-hidden="true"><span class="fh-hand">☝</span><span class="fh-text">左右にスワイプで<b>逆さま</b>に</span></div>
         <div class="stage-loading" id="stageLoading">Die Schneekugel wird vorbereitet…</div>
 
         <!-- 選択中パーツの操作バー -->
@@ -91,16 +92,11 @@
           <div class="cat-chips parts-tabs" id="partCats"></div>
           <div class="parts-category" id="partsGrid"></div>
         </div>
-        <div class="block">
-          <div class="section-label"><span class="jp">タッチ</span><span class="en">Stil</span></div>
-          <div class="style-selector" id="styleSelector"></div>
-          <p class="mini-note">置いたパーツ全部の質感が変わります。金細工・銀細工は光の映り込みもきれいです。</p>
-        </div>
         <div class="hint-box">
           <strong>Tipp</strong>
           タップでドームに置く・掴んで雪の上を移動。置いたパーツをタップすると、大きさ／高さ／反転の操作バーが出ます。<br>
-          <em style="color: var(--tcm-gold-dark);">ドームを左右にドラッグすると傾いて、逆さまにすると雪が全部天井側に落ちます。手を離すと元に戻って、雪がゆっくり降ってきます。</em><br>
-          ほぼ逆さまで手を離すと逆さのまま止まります／視点を変えるのは右ドラッグ・2本指
+          <em style="color: var(--tcm-gold-dark);">ドームを左右にスワイプすると傾きます。半分以上傾けるか、勢いよくはじくと逆さまに。ダブルタップでも逆さま⇄元に戻せます。</em><br>
+          逆さまの間に中身を変えると、自動で元の向きに戻ります／視点を変えるのは右ドラッグ・2本指
         </div>
       </section>
 
@@ -117,7 +113,8 @@
         </div>
         <div class="block">
           <div class="section-label"><span class="jp">降らせるもの</span><span class="en">Schnee &amp; Glitzer</span></div>
-          <div class="particle-grid" id="particleGrid"></div>
+          <p class="mini-note">動きの見本つき。選ぶとドームの中がそれに入れ替わって舞い上がります。</p>
+          <div class="particle-groups" id="particleGrid"></div>
           <div class="amount-row">
             <span class="amount-title">量</span>
             <input type="range" id="particleAmount" min="1000" max="24000" step="500" value="14000" aria-label="降らせるものの量">

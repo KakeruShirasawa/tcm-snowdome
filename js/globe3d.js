@@ -389,39 +389,73 @@ const RIM_COLORS = {
   none: null,
 };
 
-// 粒子スプライト（白で描いて頂点色で着色）
-function spriteTexture(kind) {
-  return canvasTex(64, 64, (ctx, w) => {
-    const c = w / 2;
-    ctx.fillStyle = '#fff'; ctx.strokeStyle = '#fff';
-    if (kind === 'circle') {
-      const g = ctx.createRadialGradient(c, c, 0, c, c, c);
-      g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.55, 'rgba(255,255,255,0.9)'); g.addColorStop(1, 'rgba(255,255,255,0)');
-      ctx.fillStyle = g; ctx.fillRect(0, 0, w, w);
-    } else if (kind === 'sparkle') {
-      const g = ctx.createRadialGradient(c, c, 0, c, c, c * 0.6);
-      g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(1, 'rgba(255,255,255,0)');
-      ctx.fillStyle = g; ctx.fillRect(0, 0, w, w);
-      ctx.fillStyle = '#fff';
-      ctx.beginPath(); ctx.moveTo(c, 2); ctx.lineTo(c + 5, c - 5); ctx.lineTo(w - 2, c); ctx.lineTo(c + 5, c + 5);
-      ctx.lineTo(c, w - 2); ctx.lineTo(c - 5, c + 5); ctx.lineTo(2, c); ctx.lineTo(c - 5, c - 5); ctx.closePath(); ctx.fill();
-    } else if (kind === 'star') {
-      ctx.beginPath();
-      for (let i = 0; i < 10; i++) { const r = i % 2 ? 12 : 28; const a = -Math.PI / 2 + (i * Math.PI) / 5; ctx.lineTo(c + Math.cos(a) * r, c + Math.sin(a) * r); }
-      ctx.closePath(); ctx.fill();
-    } else if (kind === 'heart') {
-      ctx.beginPath(); ctx.moveTo(c, 52);
-      ctx.bezierCurveTo(4, 30, 10, 6, c, 20); ctx.bezierCurveTo(54, 6, 60, 30, c, 52); ctx.fill();
-    } else if (kind === 'petal') {
-      ctx.beginPath(); ctx.ellipse(c, c, 14, 26, 0.5, 0, Math.PI * 2); ctx.fill();
-    } else if (kind === 'rect') {
-      ctx.fillRect(14, 22, 36, 20);
-    } else if (kind === 'bubble') {
-      ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(c, c, 26, 0, Math.PI * 2); ctx.stroke();
-      ctx.globalAlpha = 0.25; ctx.fill(); ctx.globalAlpha = 1;
-      ctx.beginPath(); ctx.arc(c - 9, c - 9, 6, 0, Math.PI * 2); ctx.fill();
+// 粒子スプライト（白で描いて頂点色で着色）。プレビュー用にも書き出す
+export function drawSprite(ctx, kind, w) {
+  const c = w / 2, k = w / 64;
+  ctx.save();
+  ctx.fillStyle = '#fff'; ctx.strokeStyle = '#fff'; ctx.lineCap = 'round';
+  if (kind === 'circle') {
+    const g = ctx.createRadialGradient(c, c, 0, c, c, c * 0.9);
+    g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.45, 'rgba(255,255,255,0.85)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, w, w);
+  } else if (kind === 'flake') {
+    // ぼたん雪：いくつかの丸が集まった柔らかい形
+    [[0, 0, 15], [-9, -5, 10], [8, -7, 11], [9, 7, 10], [-7, 8, 11]].forEach(([x, y, r]) => {
+      const g = ctx.createRadialGradient(c + x * k, c + y * k, 0, c + x * k, c + y * k, r * k);
+      g.addColorStop(0, 'rgba(255,255,255,0.95)'); g.addColorStop(0.6, 'rgba(255,255,255,0.7)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(c + x * k, c + y * k, r * k, 0, Math.PI * 2); ctx.fill();
+    });
+  } else if (kind === 'crystal') {
+    // 六角の雪の結晶
+    ctx.lineWidth = 2.6 * k;
+    for (let i = 0; i < 6; i++) {
+      const a = (i * Math.PI) / 3;
+      const ex = c + Math.cos(a) * 27 * k, ey = c + Math.sin(a) * 27 * k;
+      ctx.beginPath(); ctx.moveTo(c, c); ctx.lineTo(ex, ey); ctx.stroke();
+      [0.45, 0.72].forEach((t, j) => {
+        const bx = c + Math.cos(a) * 27 * k * t, by = c + Math.sin(a) * 27 * k * t, L = (j ? 6 : 8.5) * k;
+        [-1, 1].forEach((sg) => { ctx.beginPath(); ctx.moveTo(bx, by); ctx.lineTo(bx + Math.cos(a + sg * 0.9) * L, by + Math.sin(a + sg * 0.9) * L); ctx.stroke(); });
+      });
     }
-  });
+    ctx.beginPath(); ctx.arc(c, c, 4 * k, 0, Math.PI * 2); ctx.fill();
+  } else if (kind === 'glint') {
+    // ラメ：平たい六角の小片（傾くと光る）
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) { const a = (i * Math.PI) / 3 + 0.3; ctx.lineTo(c + Math.cos(a) * 20 * k, c + Math.sin(a) * 20 * k); }
+    ctx.closePath(); ctx.fill();
+    const g = ctx.createRadialGradient(c, c, 0, c, c, c);
+    g.addColorStop(0, 'rgba(255,255,255,0.5)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, w, w);
+  } else if (kind === 'sparkle') {
+    const g = ctx.createRadialGradient(c, c, 0, c, c, c * 0.6);
+    g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, w, w);
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.moveTo(c, 2 * k); ctx.lineTo(c + 5 * k, c - 5 * k); ctx.lineTo(w - 2 * k, c); ctx.lineTo(c + 5 * k, c + 5 * k);
+    ctx.lineTo(c, w - 2 * k); ctx.lineTo(c - 5 * k, c + 5 * k); ctx.lineTo(2 * k, c); ctx.lineTo(c - 5 * k, c - 5 * k); ctx.closePath(); ctx.fill();
+  } else if (kind === 'star') {
+    ctx.beginPath();
+    for (let i = 0; i < 10; i++) { const r = (i % 2 ? 11 : 26) * k; const a = -Math.PI / 2 + (i * Math.PI) / 5; ctx.lineTo(c + Math.cos(a) * r, c + Math.sin(a) * r); }
+    ctx.closePath(); ctx.fill();
+  } else if (kind === 'heart') {
+    ctx.beginPath(); ctx.moveTo(c, 50 * k);
+    ctx.bezierCurveTo(6 * k, 30 * k, 12 * k, 8 * k, c, 22 * k); ctx.bezierCurveTo(52 * k, 8 * k, 58 * k, 30 * k, c, 50 * k); ctx.fill();
+  } else if (kind === 'petal') {
+    ctx.beginPath(); ctx.ellipse(c, c, 12 * k, 24 * k, 0.5, 0, Math.PI * 2); ctx.fill();
+  } else if (kind === 'rect') {
+    ctx.fillRect(c - 17 * k, c - 10 * k, 34 * k, 20 * k);
+  } else if (kind === 'bubble') {
+    const g = ctx.createRadialGradient(c, c, 18 * k, c, c, 26 * k);
+    g.addColorStop(0, 'rgba(255,255,255,0.08)'); g.addColorStop(0.8, 'rgba(255,255,255,0.55)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(c, c, 26 * k, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.beginPath(); ctx.ellipse(c - 9 * k, c - 10 * k, 6 * k, 3.5 * k, -0.7, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function spriteTexture(kind) {
+  return canvasTex(64, 64, (ctx, w) => drawSprite(ctx, kind, w));
 }
 
 // SVG文字列 → Canvas（パーツ・背景プリセット用）
@@ -566,9 +600,10 @@ function studioEnvironment() {
 
 // ───────── 本体 ─────────
 export class Globe {
-  constructor(canvas, { onSelect = () => {} } = {}) {
+  constructor(canvas, { onSelect = () => {}, onFlip = () => {} } = {}) {
     this.canvas = canvas;
     this.onSelect = onSelect;
+    this.onFlip = onFlip;
     this.parts = new Map();
     this.selectedId = null;
     this.clock = new THREE.Clock();
@@ -668,6 +703,7 @@ export class Globe {
 
   // ───── 形状 ─────
   setShape(key) {
+    this.ensureUpright();
     this.shapeKey = key;
     const spec = (this.spec = buildShape(key));
     [this.glassFront, this.glassBack, this.snowVol, this.snowCap, this.snowLayer, this.backdrop].forEach((m) => {
@@ -715,7 +751,8 @@ export class Globe {
     // 積雪：床に積もった粒の量に応じて現れる白い層（逆さにすると消える）
     const layer = cap.clone();
     layer.translate(0, 0.006, 0);
-    this.snowLayer = new THREE.Mesh(layer, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85, emissive: 0x1a2440, emissiveIntensity: 0.12, transparent: true, opacity: 1 }));
+    this.snowLayer = new THREE.Mesh(layer, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85, emissive: 0x1a2440, emissiveIntensity: 0.12, transparent: true, opacity: 0, depthWrite: false }));
+    this.snowLayer.visible = false;
     this.snowLayer.receiveShadow = true;
     this.snowLayer.renderOrder = 1;
     this.interior.add(this.snowLayer);
@@ -738,7 +775,7 @@ export class Globe {
     if (this.bgNone) this.backdrop.visible = false;
 
     this._buildBase();
-    this._resetParticles(true);
+    this._resetParticles();
     this.parts.forEach((p) => this._placePart(p));
     this._updateSelRing();
   }
@@ -806,6 +843,7 @@ export class Globe {
   }
 
   setBaseTheme(key) {
+    this.ensureUpright();
     this.baseKey = key;
     const mk = BASE_MATERIALS[key] || BASE_MATERIALS.gold;
     if (this.baseMat) this.baseMat.dispose();
@@ -878,6 +916,7 @@ export class Globe {
 
   // ───── 背景 ─────
   async setBackground({ svg, src, none }) {
+    this.ensureUpright();
     this.bgNone = !!none;
     if (this.backdrop) this.backdrop.visible = !none;
     if (none) return;
@@ -900,6 +939,7 @@ export class Globe {
 
   // ───── パーツ ─────
   async addPart(cat, { color } = {}) {
+    this.ensureUpright();
     const id = 'p' + Date.now().toString(36) + Math.floor(Math.random() * 1e4);
     const source = cat.img ? await loadImage(cat.img) : await svgToCanvas(cat.svg.replace(/\{\{PRIMARY\}\}/g, color || cat.defaultColor || '#8b1821'), 512);
     const tex = cat.img ? new THREE.Texture(source) : new THREE.CanvasTexture(source);
@@ -971,7 +1011,7 @@ export class Globe {
     if (this.selectedId === id) this.select(null);
   }
 
-  clearParts() { [...this.parts.keys()].forEach((id) => this.removePart(id)); }
+  clearParts() { this.ensureUpright(); [...this.parts.keys()].forEach((id) => this.removePart(id)); }
 
   select(id) {
     this.selectedId = id;
@@ -1054,25 +1094,31 @@ export class Globe {
         const y = this.spec.groundY + 0.02 + p.lift;
         const g = groundPoint(y);
         drag = { p, y, off: g ? new THREE.Vector3(p.x - g.x, 0, p.z - g.z) : new THREE.Vector3() };
-        el.setPointerCapture?.(e.pointerId);
+        try { el.setPointerCapture(e.pointerId); } catch (_) {}
       } else if ((e.pointerType !== 'mouse' || e.button === 0) && !this._twoFinger) {
-        // ドームを掴んで傾ける（横ドラッグで最大360°）
-        tilt = { x0: e.clientX, a0: this.flipAngle, id: e.pointerId, lastX: e.clientX, lastT: performance.now(), vel: 0 };
-        this.flipT = 1;
-        this.tilting = true;
-        el.setPointerCapture?.(e.pointerId);
+        // ドームを掴んで傾ける（横ドラッグ。スマホは短い距離で半回転）
+        tilt = { x0: e.clientX, y0: e.clientY, a0: this.flipAngle, id: e.pointerId, lastA: this.flipAngle, lastT: performance.now(), vel: 0,
+          half: el.getBoundingClientRect().width * (e.pointerType === 'mouse' ? 0.55 : 0.38), started: false };
+        try { el.setPointerCapture(e.pointerId); } catch (_) {}
       }
     });
     el.addEventListener('touchstart', (e) => { this._twoFinger = e.touches.length > 1; if (this._twoFinger && tilt) { tilt = null; this.tilting = false; this._settleTilt(0); } }, { passive: true });
     el.addEventListener('touchend', (e) => { if (e.touches.length < 2) this._twoFinger = false; }, { passive: true });
     el.addEventListener('pointermove', (e) => {
       if (tilt && e.pointerId === tilt.id) {
-        const w = el.getBoundingClientRect().width;
-        // 右へドラッグ＝時計回りに傾く。画面幅の約 55% で半回転
-        this.flipAngle = tilt.a0 - ((e.clientX - tilt.x0) / (w * 0.55)) * Math.PI;
+        const dx = e.clientX - tilt.x0;
+        if (!tilt.started) {
+          if (Math.abs(dx) < 6) return;
+          tilt.started = true; this.tilting = true; this.flipT = 1;
+          tilt.a0 = this.flipAngle; tilt.x0 = e.clientX; tilt.lastA = this.flipAngle;
+          return;
+        }
+        // 右へドラッグ＝時計回りに傾く
+        this.flipAngle = tilt.a0 - (dx / tilt.half) * Math.PI;
         const now = performance.now();
-        tilt.vel = (e.clientX - tilt.lastX) / Math.max(1, now - tilt.lastT);
-        tilt.lastX = e.clientX; tilt.lastT = now;
+        const v = (this.flipAngle - tilt.lastA) / Math.max(1, now - tilt.lastT);
+        tilt.vel = tilt.vel * 0.4 + v * 0.6;
+        tilt.lastA = this.flipAngle; tilt.lastT = now;
         return;
       }
       if (!drag) return;
@@ -1084,14 +1130,23 @@ export class Globe {
       this._placePart(drag.p);
       this._updateSelRing();
     });
+    let lastTap = 0;
+    this._cancelTilt = () => { tilt = null; this.tilting = false; };
     const up = (e) => {
       if (tilt) {
-        const moved = Math.abs(e.clientX - tilt.x0) > 6;
-        tilt = null; this.tilting = false;
-        if (moved) { this._settleTilt(); downAt = null; return; }
+        const t0 = tilt; tilt = null; this.tilting = false;
+        if (t0.started) {
+          // 指を止めてから離した場合は勢いなし
+          const vel = performance.now() - t0.lastT > 120 ? 0 : t0.vel;
+          this._settleTilt(vel); downAt = null; return;
+        }
       }
       if (drag) { drag = null; this.dragging = false; this.controls.enabled = true; }
-      else if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 6) this.select(null);
+      else if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 10) {
+        const now = performance.now();
+        if (now - lastTap < 400) { lastTap = 0; this.flip(!this.upsideDown); this.select(null); }
+        else { lastTap = now; this.select(null); }
+      }
       downAt = null;
     };
     el.addEventListener('pointerup', up);
@@ -1122,38 +1177,62 @@ export class Globe {
     const N = PARTICLE_MAX;
     this.pCount = PARTICLE_DEFAULT;
     const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N * 3), 3));
-    g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(N * 3), 3));
-    g.setAttribute('size', new THREE.BufferAttribute(new Float32Array(N), 1));
-    g.setAttribute('alpha', new THREE.BufferAttribute(new Float32Array(N), 1));
+    const attr = (name, n) => g.setAttribute(name, new THREE.BufferAttribute(new Float32Array(N * n), n));
+    attr('position', 3); attr('color', 3); attr('size', 1); attr('alpha', 1);
+    attr('spin', 1); attr('phase', 1); attr('tumble', 1); attr('flash', 1);
     this.pv = new Float32Array(N * 3);
-    this.pPhase = new Float32Array(N);
     this.pSettled = new Uint8Array(N);
     this.pRest = new Float32Array(N);
     this.pBase = new Float32Array(N);
-    this.pSpeed = new Float32Array(N).map(() => 0.35 + Math.random() * 0.95);   // 粒ごとに落ちる速さを変える
+    this.pSpeed = new Float32Array(N);
+    this.pFreq = new Float32Array(N);
+    this.pAmp = new Float32Array(N);
+    this.pPh = new Float32Array(N).map(() => Math.random() * Math.PI * 2);
+    // 振った直後の舞い上がり（粒ごとに遅れ・時間・渦の向きを変える）
     this.pTarget = new Float32Array(N * 3);
+    this.pStart = new Float32Array(N * 3);
+    this.pDelay = new Float32Array(N);
+    this.pDur = new Float32Array(N);
+    this.pSwirl = new Float32Array(N);
+    this.pLift = new Float32Array(N);
+    this.pSpread = new Uint8Array(N);
     this.spreadT = 99;
     this.spriteCache = {};
+    this.layerOpacity = 0;
     this.pMat = new THREE.ShaderMaterial({
-      uniforms: { map: { value: null }, scale: { value: 1 } },
+      uniforms: { map: { value: null }, scale: { value: 1 }, uTime: { value: 0 } },
       vertexShader: `
         attribute float size; attribute float alpha; attribute vec3 color;
-        varying vec3 vColor; varying float vAlpha;
-        uniform float scale;
+        attribute float spin; attribute float phase; attribute float tumble; attribute float flash;
+        varying vec3 vColor; varying float vAlpha; varying float vAng; varying float vSquash; varying float vFlash;
+        uniform float scale; uniform float uTime;
         void main() {
           vColor = color; vAlpha = alpha;
+          float ang = phase + spin * uTime;
+          vAng = ang;
+          // 裏返るように薄くなる（紙吹雪・花びら・ラメ）
+          vSquash = mix(1.0, max(0.16, abs(cos(ang * 0.83 + phase * 1.7))), tumble);
+          // 面が光の方を向いた一瞬だけキラッと光る
+          float f = pow(abs(cos(ang * 1.27 + phase)), 18.0);
+          vFlash = flash * f;
           vec4 mv = modelViewMatrix * vec4(position, 1.0);
-          gl_PointSize = size * scale / -mv.z;
+          gl_PointSize = size * scale / -mv.z * (1.0 + vFlash * 0.7);
           gl_Position = projectionMatrix * mv;
         }`,
       fragmentShader: `
-        uniform sampler2D map; varying vec3 vColor; varying float vAlpha;
+        uniform sampler2D map;
+        varying vec3 vColor; varying float vAlpha; varying float vAng; varying float vSquash; varying float vFlash;
         void main() {
-          vec4 t = texture2D(map, gl_PointCoord);
-          float a = t.a * vAlpha;
+          vec2 pc = gl_PointCoord - 0.5;
+          float c = cos(vAng), s = sin(vAng);
+          pc = vec2(c * pc.x - s * pc.y, s * pc.x + c * pc.y);
+          pc.y /= vSquash;
+          if (abs(pc.x) > 0.5 || abs(pc.y) > 0.5) discard;
+          vec4 t = texture2D(map, pc + 0.5);
+          float bright = 1.0 - vFlash * 0.0 + vFlash * 2.6;
+          float a = t.a * vAlpha * (0.55 + 0.45 * vSquash) + t.a * vFlash * 0.6;
           if (a < 0.02) discard;
-          gl_FragColor = vec4(vColor * t.rgb, a);
+          gl_FragColor = vec4(vColor * t.rgb * bright, min(a, 1.0));
         }`,
       transparent: true, depthWrite: false,
     });
@@ -1162,12 +1241,13 @@ export class Globe {
     this.points.renderOrder = 2;
     this.points.frustumCulled = false;
     this.interior.add(this.points);
-    this.setParticle('snow');
+    this.setParticle('snow', { stir: false });
   }
 
-  setParticle(key) {
+  setParticle(key, { stir = true } = {}) {
+    if (stir) this.ensureUpright();
     const PRESETS = typeof PARTICLE_PRESETS !== 'undefined' ? PARTICLE_PRESETS : {};
-    const P = PRESETS[key] || { colors: ['#ffffff'], shape: 'circle', size: [1.5, 4], speed: [0.3, 1.3], sway: 0.7 };
+    const P = PRESETS[key] || PRESETS.snow || { colors: ['#ffffff'], shape: 'circle', size: [1.2, 4.6], fall: 0.11, flutter: 0.7, spin: 0, tumble: 0, flash: 0 };
     this.preset = P;
     this.presetKey = key;
     const kind = P.shape;
@@ -1175,31 +1255,41 @@ export class Globe {
     this.pMat.uniforms.map.value = this.spriteCache[kind];
     this.pMat.blending = P.glow ? THREE.AdditiveBlending : THREE.NormalBlending;
     this.pMat.needsUpdate = true;
-    const cols = P.colors.map((c) => new THREE.Color(c.startsWith('rgba') ? c.replace(/rgba\((\d+),(\d+),(\d+),[^)]*\)/, 'rgb($1,$2,$3)') : c));
-    const col = this.points.geometry.attributes.color;
-    const size = this.points.geometry.attributes.size;
+    const cols = P.colors.map((c) => new THREE.Color(c));
+    const A = this.points.geometry.attributes;
+    const mult = kind === 'circle' || kind === 'flake' ? 1.0 : 1.5;
     for (let i = 0; i < PARTICLE_MAX; i++) {
       const c = cols[(Math.random() * cols.length) | 0];
-      col.setXYZ(i, c.r, c.g, c.b);
-      size.setX(i, (P.size[0] + Math.random() * (P.size[1] - P.size[0])) * (kind === 'circle' ? 1.0 : 1.6));
-      this.pBase[i] = 0.75 + Math.random() * 0.25;
+      A.color.setXYZ(i, c.r, c.g, c.b);
+      const r = Math.pow(Math.random(), 1.8);              // 小さい粒が多く、大きい粒は少し
+      A.size.setX(i, (P.size[0] + r * (P.size[1] - P.size[0])) * mult);
+      this.pSpeed[i] = 0.55 + r * 0.7 + Math.random() * 0.35; // 大きい粒ほど少し速く沈む
+      this.pFreq[i] = 0.6 + Math.random() * 1.5;
+      this.pAmp[i] = 0.4 + Math.random() * 0.9;
+      this.pBase[i] = 0.62 + Math.random() * 0.38;
+      A.spin.setX(i, (P.spin || 0) * (0.5 + Math.random()) * (Math.random() < 0.5 ? -1 : 1));
+      A.phase.setX(i, this.pPh[i]);
+      A.tumble.setX(i, (P.tumble || 0) * (0.6 + Math.random() * 0.4));
+      A.flash.setX(i, P.flash || 0);
     }
-    col.needsUpdate = true; size.needsUpdate = true;
-    this._resetParticles(true);
-    this.shake();
+    ['color', 'size', 'spin', 'phase', 'tumble', 'flash'].forEach((n) => { A[n].needsUpdate = true; });
+    if (this.amount) this.setParticleAmount(this.amount);
+    if (stir) this.shake();
   }
 
-  // 降らせるものの量（表示する粒子数）
+  // 降らせるものの量（スライダーの値 × 種類ごとの密度 = 表示する粒子数）
   setParticleAmount(n) {
+    this.amount = n;
     const prev = this.pCount;
-    this.pCount = Math.max(100, Math.min(PARTICLE_MAX, Math.round(n)));
+    const dens = (this.preset && this.preset.density) || 1;
+    this.pCount = Math.max(100, Math.min(PARTICLE_MAX, Math.round(n * dens)));
     this.points.geometry.setDrawRange(0, this.pCount);
     // 増えた分は宙に浮かせて自然に降らせる
-    if (this.pCount > prev) {
+    if (this.pCount > prev && this.spec) {
       const pos = this.points.geometry.attributes.position;
       for (let i = prev; i < this.pCount; i++) {
-        const [x, y, z] = this._randomInside(this.spec.groundY + 0.05);
-        pos.setXYZ(i, x, y, z); this.pSettled[i] = 0;
+        const [x, y, z] = this._randomInSlice(this.spec.groundY + 0.05, this.spec.topY - 0.05);
+        pos.setXYZ(i, x, y, z); this.pSettled[i] = 0; this.pSpread[i] = 0;
         this.pv[i * 3] = this.pv[i * 3 + 1] = this.pv[i * 3 + 2] = 0;
       }
       pos.needsUpdate = true;
@@ -1228,19 +1318,24 @@ export class Globe {
     return [0, s.groundY + 0.3, 0];
   }
 
-  _resetParticles(settle) {
+  // 粒をドーム全体にふんわり浮かべた状態にする（固まって積もった状態からは始めない）
+  _resetParticles() {
     if (!this.points || !this.spec) return;
     const pos = this.points.geometry.attributes.position;
-    const gy = this.spec.groundY;
+    const s = this.spec, gy = s.groundY;
     for (let i = 0; i < PARTICLE_MAX; i++) {
-      const [x, y, z] = this._randomInside(gy + 0.02);
+      const [x, y, z] = this._randomInSlice(gy + 0.05, s.topY - 0.04);
+      pos.setXYZ(i, x, y, z);
       this.pRest[i] = gy + 0.012 + Math.random() * 0.02;
-      if (settle && Math.random() < 0.75) { pos.setXYZ(i, x, this.pRest[i], z); this.pSettled[i] = this.spec.inside(x, gy + 0.06, z) ? 1 : 0; if (!this.pSettled[i]) pos.setXYZ(i, x, y, z); }
-      else { pos.setXYZ(i, x, y, z); this.pSettled[i] = 0; }
-      this.pv[i * 3] = this.pv[i * 3 + 1] = this.pv[i * 3 + 2] = 0;
-      this.pPhase[i] = Math.random() * Math.PI * 2;
+      this.pSettled[i] = 0; this.pSpread[i] = 0;
+      this.pv[i * 3] = this.pv[i * 3 + 2] = 0; this.pv[i * 3 + 1] = -0.02;
     }
     pos.needsUpdate = true;
+    this.layerOpacity = 0;
+  }
+
+  _gravityLocal() {
+    return this._gLocal.set(0, -1, 0).applyQuaternion(this._qInv.copy(this.root.quaternion).invert());
   }
 
   shake() {
@@ -1248,14 +1343,25 @@ export class Globe {
     this.spreadT = 0;
     const s = this.spec;
     if (!s) return;
+    this.root.updateMatrixWorld();
+    const upright = this._gravityLocal().y < -0.85;
+    const pos = this.points.geometry.attributes.position.array;
     for (let i = 0; i < PARTICLE_MAX; i++) {
+      const o = i * 3;
       this.pSettled[i] = 0;
-      // ドーム内のどこかへ均等に散らす（床から少し上〜天井まで）
       const [x, y, z] = this._randomInSlice(s.groundY + 0.06, s.topY - 0.06);
-      this.pTarget[i * 3] = x; this.pTarget[i * 3 + 1] = y; this.pTarget[i * 3 + 2] = z;
-      this.pv[i * 3] = (Math.random() - 0.5) * 0.6;
-      this.pv[i * 3 + 1] = Math.random() * 0.6;
-      this.pv[i * 3 + 2] = (Math.random() - 0.5) * 0.6;
+      this.pTarget[o] = x; this.pTarget[o + 1] = y; this.pTarget[o + 2] = z;
+      this.pStart[o] = pos[o]; this.pStart[o + 1] = pos[o + 1]; this.pStart[o + 2] = pos[o + 2];
+      // 床の粒ほど少し遅れて巻き上がる → 一塊ではなく、渦を巻きながら次々と舞い上がる
+      const low = pos[o + 1] < s.groundY + 0.08 ? 1 : 0;
+      this.pDelay[i] = Math.random() * 0.25 + low * Math.random() * 0.45;
+      this.pDur[i] = 0.75 + Math.random() * 0.75;
+      this.pSwirl[i] = (Math.random() < 0.75 ? 1 : -1) * (0.9 + Math.random() * 1.8);
+      this.pLift[i] = Math.random() * 0.35;
+      this.pSpread[i] = upright ? 1 : 0;
+      this.pv[o] = (Math.random() - 0.5) * 0.6;
+      this.pv[o + 1] = Math.random() * 0.6;
+      this.pv[o + 2] = (Math.random() - 0.5) * 0.6;
     }
   }
 
@@ -1263,106 +1369,138 @@ export class Globe {
     const P = this.preset, s = this.spec;
     const pos = this.points.geometry.attributes.position;
     const alpha = this.points.geometry.attributes.alpha;
-    const rise = P.speed[0] < 0;
-    const fall = (Math.abs(P.speed[0]) + Math.abs(P.speed[1])) * 0.06;
+    const rise = P.fall < 0;
+    const fall = Math.abs(P.fall);
     // ドーム内（ローカル座標）での重力の向き。逆さまにすると天井側へ落ちる
-    const g = this._gLocal.set(0, -1, 0).applyQuaternion(this._qInv.copy(this.root.quaternion).invert());
+    const g = this._gravityLocal();
     const dir = rise ? -1 : 1;
     const tx = g.x * fall * dir, ty = g.y * fall * dir, tz = g.z * fall * dir;
-    const k = Math.min(1, dt * 1.6);
+    // 重力に垂直な2方向（ひらひら揺れる向き）
+    let e1x = g.y, e1y = -g.x, e1z = 0;
+    let L = Math.hypot(e1x, e1y);
+    if (L < 0.2) { e1x = 0; e1y = g.z; e1z = -g.y; L = Math.hypot(e1y, e1z); }
+    e1x /= L; e1y /= L; e1z /= L;
+    const e2x = g.y * e1z - g.z * e1y, e2y = g.z * e1x - g.x * e1z, e2z = g.x * e1y - g.y * e1x;
+    const k = Math.min(1, dt * 1.8);
     this.spreadT += dt;
-    const spreading = this.spreadT < 0.8 && g.y < -0.85;
-    const swirl = 0.55 * Math.exp(-(this.shakeT || 0) * 0.45);   // 振った後のゆるい渦
+    const turb = 0.42 * Math.exp(-(this.shakeT || 0) * 0.42);  // 振った後の水の流れ（だんだん静まる）
     const upright = g.y < -0.85;
-    const sway = (P.sway || 1);
+    const flut = (P.flutter || 0) * 0.07;
+    const cy = (s.groundY + s.topY) / 2;
+    let onGround = 0;
     for (let i = 0; i < this.pCount; i++) {
       const o = i * 3;
       let x = pos.array[o], y = pos.array[o + 1], z = pos.array[o + 2];
       let a = this.pBase[i];
-      if (P.twinkle) a *= 0.45 + 0.55 * Math.abs(Math.sin(t * 3 + this.pPhase[i]));
       if (this.pSettled[i] === 1 && !upright) this.pSettled[i] = 0;
-      else if (this.pSettled[i] === 2 && (upright || s.inside(x + g.x * 0.04, y + g.y * 0.04, z + g.z * 0.04))) { this.pSettled[i] = 0; this.pv[i * 3] = g.x * 0.2; this.pv[i * 3 + 1] = g.y * 0.2; this.pv[i * 3 + 2] = g.z * 0.2; }
-      if (!this.pSettled[i]) {
-        let vx, vy, vz;
-        if (spreading) {
-          // 振った直後：割り当てた場所へ散っていく
-          const sp = 7.0 * (1 - this.spreadT / 0.8) + 1.0;
-          vx = this.pv[o] = (this.pTarget[o] - x) * sp;
-          vy = this.pv[o + 1] = (this.pTarget[o + 1] - y) * sp;
-          vz = this.pv[o + 2] = (this.pTarget[o + 2] - z) * sp;
-        } else {
-          const ps = this.pSpeed[i];
-          vx = (this.pv[o] += (tx * ps + (-z) * swirl - this.pv[o]) * k);
-          vy = (this.pv[o + 1] += (ty * ps - this.pv[o + 1]) * k);
-          vz = (this.pv[o + 2] += (tz * ps + x * swirl - this.pv[o + 2]) * k);
+      else if (this.pSettled[i] === 2 && (upright || s.inside(x + g.x * 0.04, y + g.y * 0.04, z + g.z * 0.04))) { this.pSettled[i] = 0; this.pv[o] = g.x * 0.2; this.pv[o + 1] = g.y * 0.2; this.pv[o + 2] = g.z * 0.2; }
+
+      if (this.pSpread[i]) {
+        if (!upright) this.pSpread[i] = 0;
+        const u = (this.spreadT - this.pDelay[i]) / this.pDur[i];
+        if (u >= 1) {
+          this.pSpread[i] = 0;
+          x = this.pTarget[o]; y = this.pTarget[o + 1]; z = this.pTarget[o + 2];
+          const sw = Math.sign(this.pSwirl[i]) * 0.3;
+          this.pv[o] = -z * sw; this.pv[o + 1] = 0.02; this.pv[o + 2] = x * sw;
+        } else if (u > 0) {
+          const e = 1 - (1 - u) ** 3, bump = 4 * e * (1 - e);
+          let bx = this.pStart[o] + (this.pTarget[o] - this.pStart[o]) * e;
+          const by = this.pStart[o + 1] + (this.pTarget[o + 1] - this.pStart[o + 1]) * e + this.pLift[i] * bump;
+          let bz = this.pStart[o + 2] + (this.pTarget[o + 2] - this.pStart[o + 2]) * e;
+          const an = this.pSwirl[i] * bump, ca = Math.cos(an), sa = Math.sin(an);
+          let rx = bx * ca - bz * sa, rz = bx * sa + bz * ca;
+          let ok = s.inside(rx, by, rz);
+          for (let q = 0; !ok && q < 4; q++) { rx *= 0.88; rz *= 0.88; ok = s.inside(rx, by, rz); }
+          if (ok) { x = rx; y = by; z = rz; }
+          else if (s.inside(bx, by, bz)) { x = bx; y = by; z = bz; }
         }
-        const nx = x + (vx + Math.sin(t * 1.3 + this.pPhase[i]) * sway * 0.05) * dt;
-        const ny = y + vy * dt;
-        const nz = z + (vz + Math.cos(t * 1.1 + this.pPhase[i]) * sway * 0.03) * dt;
-        if (s.inside(nx, ny, nz)) { x = nx; y = ny; z = nz; }
+      } else if (!this.pSettled[i]) {
+        const ps = this.pSpeed[i];
+        const w = this.pFreq[i], ph = this.pPh[i];
+        const f1 = Math.sin(t * w + ph) * flut * this.pAmp[i];
+        const f2 = Math.cos(t * w * 0.83 + ph * 1.3) * flut * this.pAmp[i];
+        // 渦（ドームの軸まわり）＋ゆるい乱れ
+        const nx = Math.sin(y * 3.1 + t * 0.9 + ph) * turb * 0.35;
+        const nz = Math.cos(x * 2.7 - t * 0.8 + ph) * turb * 0.35;
+        const vx = (this.pv[o] += (tx * ps + f1 * e1x + f2 * e2x - z * turb + nx - this.pv[o]) * k);
+        const vy = (this.pv[o + 1] += (ty * ps + f1 * e1y + f2 * e2y + Math.sin(z * 2.3 + t + ph) * turb * 0.18 - this.pv[o + 1]) * k);
+        const vz = (this.pv[o + 2] += (tz * ps + f1 * e1z + f2 * e2z + x * turb + nz - this.pv[o + 2]) * k);
+        const nx2 = x + vx * dt, ny2 = y + vy * dt, nz2 = z + vz * dt;
+        if (s.inside(nx2, ny2, nz2)) { x = nx2; y = ny2; z = nz2; }
         else if (!rise && (vx * g.x + vy * g.y + vz * g.z) > 0.02 && !upright) {
-          // 重力の向きに進んで壁に当たった → 壁に沿って一番低いところまで滑り、そこで積もる
-          const cy = (s.groundY + s.topY) / 2;
-          const sx = x + (0 - x) * 0.05 + g.x * 0.03, sy = y + (cy - y) * 0.05 + g.y * 0.03, sz = z + (0 - z) * 0.05 + g.z * 0.03;
+          // 重力の向きに進んで壁に当たった → 壁に沿って一番低いところまで滑り、そこで止まる
+          const sx = x - x * 0.05 + g.x * 0.03, sy = y + (cy - y) * 0.05 + g.y * 0.03, sz = z - z * 0.05 + g.z * 0.03;
           if (s.inside(sx, sy, sz) && ((sx - x) * g.x + (sy - y) * g.y + (sz - z) * g.z) > 0.0008) { x = sx; y = sy; z = sz; }
           else this.pSettled[i] = 2;
-        } else if (spreading) {
-          // 散らしている最中は壁で押し戻さず、目標へまっすぐ置く
-          x = this.pTarget[o]; y = this.pTarget[o + 1]; z = this.pTarget[o + 2];
         } else {
           this.pv[o] *= -0.3; this.pv[o + 1] *= -0.3; this.pv[o + 2] *= -0.3;
-          const cy = (s.groundY + s.topY) / 2;
           x *= 0.985; z *= 0.985; y = (y - cy) * 0.985 + cy;
         }
-        if (!rise && upright && y <= this.pRest[i]) {
+        if (!rise && g.y < 0 && y <= this.pRest[i]) {
           y = this.pRest[i];
-          if (s.inside(x, s.groundY + 0.06, z)) this.pSettled[i] = 1;
-        }
-        if (!rise && !upright && g.y < 0 && y <= this.pRest[i]) {
-          // 斜めの時も雪面より下には潜らない
-          y = this.pRest[i];
+          if (upright && s.inside(x, s.groundY + 0.06, z)) this.pSettled[i] = 1;
         }
         if (rise && y > s.topY - 0.15) {
           const [rx, , rz] = this._randomInside(s.groundY);
           x = rx; z = rz; y = s.groundY + 0.05;
         }
-      } else {
-        a *= 0.9;
       }
+      if (this.pSettled[i]) { a *= 0.85; if (this.pSettled[i] === 1) onGround++; }
       pos.array[o] = x; pos.array[o + 1] = y; pos.array[o + 2] = z;
       alpha.array[i] = a;
     }
     pos.needsUpdate = true;
     alpha.needsUpdate = true;
+    // 床に積もった粒の量に応じて、積雪の層がうっすら現れる（逆さにすると消える）
+    if (this.snowLayer) {
+      const max = P.group === 'snow' || !P.group ? 0.95 : 0.5;
+      const target = rise || !upright ? 0 : Math.min(1, onGround / (this.pCount * 0.45)) * max;
+      this.layerOpacity += (target - this.layerOpacity) * Math.min(1, dt * (target < this.layerOpacity ? 6 : 0.8));
+      this.snowLayer.material.opacity = this.layerOpacity;
+      this.snowLayer.visible = this.layerOpacity > 0.01;
+    }
   }
 
-  _settleTilt() {
+  // 指を離したとき：勢い（フリック）も加味して、近い方（正立／逆さ）へ落ち着かせる
+  _settleTilt(vel = 0) {
     const a = this.flipAngle;
-    const turns = Math.round(a / (Math.PI * 2));
-    const rel = a - turns * Math.PI * 2;                 // -π..π
-    const nearDown = Math.abs(Math.abs(rel) - Math.PI) < 0.6;
-    const target = turns * Math.PI * 2 + (nearDown ? Math.sign(rel || 1) * Math.PI : 0);
-    this.upsideDown = nearDown;
-    this.flipFrom = a; this.flipTo = target; this.flipT = 0; this.flipDur = 0.9;
+    const proj = a + Math.max(-1.8, Math.min(1.8, vel * 260));
+    const n = Math.round(proj / Math.PI);
+    const target = n * Math.PI;
+    this.upsideDown = Math.abs(n % 2) === 1;
+    this.flipFrom = a; this.flipTo = target; this.flipT = 0;
+    this.flipDur = 0.45 + 0.5 * Math.min(1, Math.abs(target - a) / Math.PI);
+    this.onFlip(this.upsideDown);
   }
 
   // 逆さまにする / 元に戻す
   flip(upsideDown = !this.upsideDown) {
-    if (upsideDown === this.upsideDown && this.flipT >= 1) return this.upsideDown;
+    const turns = Math.round(this.flipAngle / (Math.PI * 2));
+    const to = turns * Math.PI * 2 + (upsideDown ? Math.PI : 0);
+    if (upsideDown === this.upsideDown && Math.abs(this.flipAngle - to) < 1e-3 && Math.abs(this.flipTo - to) < 1e-3) return this.upsideDown;
+    if (this._cancelTilt) this._cancelTilt();
     this.upsideDown = upsideDown;
     this.flipFrom = this.flipAngle;
-    const turns = Math.round(this.flipAngle / (Math.PI * 2));
-    this.flipTo = turns * Math.PI * 2 + (upsideDown ? Math.PI : 0);
-    this.flipDur = 1.3;
+    this.flipTo = to;
+    this.flipDur = 1.1;
     this.flipT = 0;
     // 積もっていた雪をはがして、新しい重力で落ち直させる
     for (let i = 0; i < this.pCount; i++) {
-      this.pSettled[i] = 0;
+      this.pSettled[i] = 0; this.pSpread[i] = 0;
       this.pv[i * 3] = (Math.random() - 0.5) * 0.3;
       this.pv[i * 3 + 1] = (Math.random() - 0.5) * 0.3;
       this.pv[i * 3 + 2] = (Math.random() - 0.5) * 0.3;
     }
+    this.onFlip(upsideDown);
     return upsideDown;
+  }
+
+  // 中身を変えるときは、まず正立に戻す（逆さのまま組み替えると表示がずれるため）
+  ensureUpright() {
+    const tilted = Math.abs(Math.cos(this.flipAngle) - 1) > 0.002 || Math.abs(Math.cos(this.flipTo) - 1) > 0.002;
+    if (this.upsideDown || tilted || this.tilting) { this.flip(false); return true; }
+    return false;
   }
 
   // ───── ループ ─────
@@ -1402,6 +1540,7 @@ export class Globe {
     }
     this._faceCamera();
     this.pMat.uniforms.scale.value = this.renderer.domElement.height * 0.015;
+    this.pMat.uniforms.uTime.value = t;
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
     requestAnimationFrame(() => this._loop());

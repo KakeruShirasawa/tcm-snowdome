@@ -1,7 +1,7 @@
 // ============================================================
 // スノードームメーカー（3D版）UI
 // ============================================================
-import { Globe, PART_STYLES, WATER_TINTS, GROUND_TYPES, OUTSIDES } from './globe3d.js';
+import { Globe, WATER_TINTS, GROUND_TYPES, OUTSIDES, drawSprite } from './globe3d.js';
 
 const State = {
   shape: 'circle',
@@ -9,7 +9,6 @@ const State = {
   glassTheme: 'gold',
   background: 'none',
   particle: 'snow',
-  style: 'painted',
   ground: 'snow',
   water: 'clear',
   outside: 'studio',
@@ -23,10 +22,11 @@ const PART_CATEGORIES = [
 
 let globe;
 
-init();
+// モジュール内の定数（ParticlePreview など）がすべて初期化されてから起動する
+queueMicrotask(init);
 
 function init() {
-  globe = new Globe(document.getElementById('globeCanvas'), { onSelect: onPartSelected });
+  globe = new Globe(document.getElementById('globeCanvas'), { onSelect: onPartSelected, onFlip: onFlipped });
   window.globe = globe; // デバッグ・書き出し用
   window.exportToPNG = async () => globe.exportPNG(1200);
 
@@ -41,6 +41,7 @@ function init() {
   initFinishing();
   initToolbar();
   initStage();
+  initFlipHint();
   initActions();
 
   if (State.background === 'none') globe.setBackground({ none: true });
@@ -142,10 +143,103 @@ function initParticleAmount() {
 }
 
 function initParticlePanel() {
-  optionList('particleGrid', Object.entries(PARTICLE_PRESETS), State.particle,
-    { cls: 'particle-option', html: (p) => `<span class="icon">${p.icon}</span><span class="name">${p.name}</span>` },
-    (key) => { State.particle = key; globe.setParticle(key); shakeStage(); });
+  const wrap = document.getElementById('particleGrid');
+  wrap.innerHTML = '';
+  const cards = [];
+  PARTICLE_GROUPS.forEach(([g, jp, en]) => {
+    const items = Object.entries(PARTICLE_PRESETS).filter(([, p]) => p.group === g);
+    if (!items.length) return;
+    const sec = document.createElement('div');
+    sec.className = 'pgroup';
+    sec.innerHTML = `<div class="pgroup-label">${jp}<span class="en">${en}</span></div><div class="pgrid"></div>`;
+    const grid = sec.querySelector('.pgrid');
+    items.forEach(([key, p]) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'particle-card' + (key === State.particle ? ' selected' : '');
+      b.dataset.key = key;
+      b.setAttribute('aria-label', `${p.name}：${p.desc.replace('\n', '')}`);
+      b.innerHTML = `<canvas class="pc-preview" width="160" height="120"></canvas><span class="pc-name">${p.name}</span><span class="pc-desc">${p.desc.replace('\n', '<br>')}</span>`;
+      b.addEventListener('click', () => {
+        wrap.querySelectorAll('.particle-card').forEach((o) => o.classList.toggle('selected', o === b));
+        State.particle = key;
+        globe.setParticle(key);
+        shakeStage();
+      });
+      grid.appendChild(b);
+      cards.push({ canvas: b.querySelector('canvas'), preset: p });
+    });
+    wrap.appendChild(sec);
+  });
+  ParticlePreview.start(wrap, cards);
 }
+
+// 降らせるものの「動きの見本」：カードの中で実際の動き方（沈む速さ・ひらひら・回転・きらめき）を再現
+const ParticlePreview = (() => {
+  const tinted = new Map();
+  function sprite(kind, color) {
+    const key = kind + color;
+    if (tinted.has(key)) return tinted.get(key);
+    const c = document.createElement('canvas'); c.width = c.height = 48;
+    const x = c.getContext('2d');
+    drawSprite(x, kind, 48);
+    x.globalCompositeOperation = 'source-in'; x.fillStyle = color; x.fillRect(0, 0, 48, 48);
+    tinted.set(key, c);
+    return c;
+  }
+  function makeParticles(p, W, H) {
+    const n = p.size[1] < 3 ? 46 : p.size[1] > 8 ? 13 : 24;
+    const mult = p.shape === 'circle' || p.shape === 'flake' ? 3.2 : 4.2;
+    return Array.from({ length: n }, () => {
+      const r = Math.pow(Math.random(), 1.8);
+      return {
+        x: Math.random() * W, y: Math.random() * H, r: (p.size[0] + r * (p.size[1] - p.size[0])) * mult,
+        v: (0.55 + r * 0.7 + Math.random() * 0.35), w: 0.6 + Math.random() * 1.5, amp: 0.4 + Math.random() * 0.9,
+        ph: Math.random() * 6.28, spin: (p.spin || 0) * (0.5 + Math.random()) * (Math.random() < 0.5 ? -1 : 1),
+        img: sprite(p.shape, p.colors[(Math.random() * p.colors.length) | 0]), a: 0.62 + Math.random() * 0.38,
+      };
+    });
+  }
+  function draw(card, t, dt) {
+    const { canvas: cv, preset: p } = card;
+    const ctx = cv.getContext('2d'), W = cv.width, H = cv.height;
+    if (!card.ps) card.ps = makeParticles(p, W, H);
+    const bg = ctx.createRadialGradient(W / 2, H * 0.35, 4, W / 2, H / 2, W * 0.75);
+    bg.addColorStop(0, '#24365f'); bg.addColorStop(1, '#070d22');
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    ctx.globalCompositeOperation = p.glow ? 'lighter' : 'source-over';
+    const fall = p.fall * 300, flut = (p.flutter || 0) * 9;
+    card.ps.forEach((q) => {
+      q.y += fall * q.v * dt;
+      const sx = Math.sin(t * q.w + q.ph) * flut * q.amp;
+      if (fall > 0 && q.y > H + q.r) { q.y = -q.r; q.x = Math.random() * W; }
+      if (fall < 0 && q.y < -q.r) { q.y = H + q.r; q.x = Math.random() * W; }
+      const ang = q.ph + q.spin * t;
+      const sq = 1 - (p.tumble || 0) * (1 - Math.max(0.16, Math.abs(Math.cos(ang * 0.83 + q.ph * 1.7))));
+      const fl = (p.flash || 0) * Math.pow(Math.abs(Math.cos(ang * 1.27 + q.ph)), 18);
+      const size = q.r * (1 + fl * 0.7);
+      ctx.save();
+      ctx.translate(q.x + sx, q.y); ctx.rotate(ang); ctx.scale(1, sq);
+      ctx.globalAlpha = Math.min(1, q.a * (0.55 + 0.45 * sq));
+      ctx.drawImage(q.img, -size / 2, -size / 2, size, size);
+      if (fl > 0.05) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = fl; ctx.drawImage(q.img, -size / 2, -size / 2, size, size); ctx.drawImage(q.img, -size / 2, -size / 2, size, size); ctx.globalCompositeOperation = p.glow ? 'lighter' : 'source-over'; }
+      ctx.restore();
+    });
+  }
+  return {
+    start(wrap, cards) {
+      let last = performance.now();
+      const loop = (now) => {
+        const dt = Math.min(0.05, (now - last) / 1000); last = now;
+        // 見えている時だけ描く
+        if (wrap.offsetParent !== null && !document.hidden) cards.forEach((c) => draw(c, now / 1000, dt));
+        requestAnimationFrame(loop);
+      };
+      requestAnimationFrame(loop);
+    },
+  };
+})();
 
 // ───────── パーツ ─────────
 function initPartsPanel() {
@@ -174,17 +268,13 @@ function initStepTabs() {
   }));
 }
 
-// ───────── 仕上げ（タッチ・雪面・水・飾る場所・刻印・オルゴール） ─────────
+// ───────── 仕上げ（雪面・水・飾る場所・刻印・オルゴール） ─────────
 function swatchRow(id, entries, current, swatchCss, onPick) {
   optionList(id, entries, current,
     { cls: 'theme-option', html: (t) => `<span class="swatch" style="${swatchCss(t)}"></span><span class="name">${t.name}</span>` }, onPick);
 }
 
 function initFinishing() {
-  optionList('styleSelector', Object.entries(PART_STYLES), State.style,
-    { cls: 'style-option', html: (t) => `<span class="name">${t.name}</span>` },
-    (k) => { State.style = k; globe.setPartStyle(k); });
-
   const hex = (n) => '#' + n.toString(16).padStart(6, '0');
   swatchRow('groundSelector', Object.entries(GROUND_TYPES), State.ground,
     (t) => `background: radial-gradient(circle at 35% 30%, #fff, ${hex(t.color)} 60%, ${t.metalness > 0.3 ? '#8a6a3a' : hex(t.color)});`,
@@ -345,6 +435,26 @@ function initStage() {
       }
     });
   }
+}
+
+// 逆さまにできたら、ステージ上の操作ヒントを消す（次回以降も出さない）
+function onFlipped(down) {
+  if (down) {
+    document.getElementById('flipHint')?.classList.add('done');
+    try { localStorage.setItem('tcm_snowdome_flipped', '1'); } catch (e) {}
+    globe.select(null);
+  }
+}
+
+function initFlipHint() {
+  const h = document.getElementById('flipHint');
+  if (!h) return;
+  let seen = false;
+  try { seen = localStorage.getItem('tcm_snowdome_flipped') === '1'; } catch (e) {}
+  if (seen) h.classList.add('done');
+  else setTimeout(() => h.classList.add('show'), 1200);
+  // マウス環境は表記を変える
+  if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) h.querySelector('.fh-text').innerHTML = '左右にドラッグで<b>逆さま</b>に';
 }
 
 function flipStage(force) {
