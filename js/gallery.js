@@ -157,12 +157,8 @@ async function toggleLike(id, btn) {
   _saveLikedToStorage();
 
   try {
-    const fd = new FormData();
-    fd.append('action', 'like');
-    fd.append('id', id);
-    fd.append('voter', Gallery.voterId);
-    fd.append('op', op);
-    const res = await fetch(CONFIG.GAS_WEBAPP_URL, { method: 'POST', body: fd });
+    const body = new URLSearchParams({ action: 'like', id, voter: Gallery.voterId, op });
+    const res = await fetch(CONFIG.GAS_WEBAPP_URL, { method: 'POST', body });
     const data = await res.json();
     if (data.ok) countEl.textContent = data.likes;
   } catch (err) {

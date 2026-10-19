@@ -1,236 +1,205 @@
 /**
  * ============================================================
- * 東京クリスマスマーケット スノードームコンテスト GAS Backend
+ * 東京クリスマスマーケット2026 スノードームコンテスト GAS Backend
  *
- * 【セットアップ手順】
- * 1. 新規Googleスプレッドシートを作成
- * 2. 「拡張機能」→「Apps Script」を開く
- * 3. このコードを貼り付ける
- * 4. 下の CONFIG の DRIVE_FOLDER_ID を自分の Google Drive フォルダIDに置き換え
- *    （スノードーム画像を保存する専用フォルダを事前に作成）
- * 5. 「デプロイ」→「新しいデプロイ」→種類「ウェブアプリ」
- *    - 次のユーザーとして実行：自分
- *    - アクセス権：全員
- * 6. 発行されたURLを snowdome/js/config.js の GAS_WEBAPP_URL に設定
+ * ・投稿画像は Drive フォルダ（DRIVE_FOLDER_ID）に保存
+ * ・投稿データ／いいねはスプレッドシート（スクリプトプロパティ SPREADSHEET_ID）に保存
+ * ・投稿は status=pending で入り、スプレッドシートで approved に変えるとギャラリーに出ます
+ *   （rejected = 非掲載）
+ *
+ * 【初回セットアップ】
+ * 1. setup() をエディタから実行（シート作成・承認プルダウン設定）
+ * 2. デプロイ →「ウェブアプリ」／次のユーザーとして実行：自分／アクセス：全員
+ * 3. 発行URLを js/config.js の GAS_WEBAPP_URL に設定
  * ============================================================
  */
 
 const CONFIG = {
-  DRIVE_FOLDER_ID: '1xy01RM9famhNIIC8kNp3mDr68svYSwkm', // ★要設定
-  SHEET_NAME: 'posts',                                   // 投稿データシート
-  LIKES_SHEET_NAME: 'likes',                             // いいねシート
-  AUTO_APPROVE: false,                                    // true=即公開、false=手動承認
-  SITE_URL: 'https://tokyochristmas.jp/snowdome/',       // 公開サイトURL
+  DRIVE_FOLDER_ID: '1xy01RM9famhNIIC8kNp3mDr68svYSwkm',
+  DEFAULT_SPREADSHEET_ID: '15UZ1kX9cG54Uc2ChgnfTXmqdUu04OhKgIuqo9gLAJ04',
+  SHEET_NAME: 'posts',
+  LIKES_SHEET_NAME: 'likes',
+  AUTO_APPROVE: false,            // true = 即公開 / false = 手動承認
+  SITE_URL: 'https://kakerushirasawa.github.io/tcm-snowdome/',
+  MAX_IMAGE_B64: 6 * 1024 * 1024, // base64文字数の上限（約4.5MB）
+  SUBMIT_COOLDOWN_SEC: 60,        // 同一端末からの連投間隔
+  DAILY_SUBMIT_CAP: 3000,         // 1日の投稿上限（荒らし対策）
 };
 
-/**
- * メインエントリ：POST
- * 投稿画像の受け付け
- */
+const STATUS = ['pending', 'approved', 'rejected'];
+const COL = { id: 1, timestamp: 2, name: 3, comment: 4, fileId: 5, imageUrl: 6, status: 7, likes: 8, ua: 9 };
+
+// ───────── エントリポイント ─────────
 function doPost(e) {
   try {
-    const params = e.parameter;
-    const action = params.action;
-
-    if (action === 'submit') return _submitPost(params);
-    if (action === 'like') return _toggleLike(params);
+    const p = (e && e.parameter) || {};
+    if (p.action === 'submit') return _submitPost(p);
+    if (p.action === 'like') return _toggleLike(p);
     return _json({ ok: false, error: 'unknown action' });
   } catch (err) {
     console.error(err);
-    return _json({ ok: false, error: String(err) });
+    return _json({ ok: false, error: 'server error' });
   }
 }
 
-/**
- * メインエントリ：GET
- * ギャラリー取得
- */
 function doGet(e) {
   try {
-    const params = e.parameter;
-    const action = params.action || 'list';
-
-    if (action === 'list') return _listPosts(params);
-    if (action === 'detail') return _detailPost(params);
+    const p = (e && e.parameter) || {};
+    const action = p.action || 'list';
+    if (action === 'list') return _listPosts(p);
+    if (action === 'detail') return _detailPost(p);
+    if (action === 'ping') return _json({ ok: true, service: 'tcm-snowdome' });
     return _json({ ok: false, error: 'unknown action' });
   } catch (err) {
     console.error(err);
-    return _json({ ok: false, error: String(err) });
+    return _json({ ok: false, error: 'server error' });
   }
 }
 
-/**
- * 投稿の保存
- */
-function _submitPost(params) {
-  const name = (params.name || '').toString().trim().slice(0, 20);
-  const comment = (params.comment || '').toString().trim().slice(0, 140);
-  const imageDataUrl = params.image;
-  const ua = (params.ua || '').toString().slice(0, 200);
+// ───────── 投稿 ─────────
+function _submitPost(p) {
+  const name = _clean(p.name, 20);
+  const comment = _clean(p.comment, 140);
+  const ua = _clean(p.ua, 200);
+  const client = _clean(p.client, 64);
+  const dataUrl = String(p.image || '');
 
-  if (!name) return _json({ ok: false, error: 'name required' });
-  if (!imageDataUrl || !imageDataUrl.startsWith('data:image/')) {
-    return _json({ ok: false, error: 'invalid image' });
-  }
+  if (!name) return _json({ ok: false, error: 'ニックネームを入力してください' });
 
-  // DataURL -> Blob
-  const matches = imageDataUrl.match(/^data:(image\/\w+);base64,(.+)$/);
-  if (!matches) return _json({ ok: false, error: 'invalid dataurl' });
-  const mime = matches[1];
-  const b64 = matches[2];
-  if (mime !== 'image/png' && mime !== 'image/jpeg') return _json({ ok: false, error: 'unsupported image' });
-  if (b64.length > 8 * 1024 * 1024) return _json({ ok: false, error: 'image too large' });
+  const m = dataUrl.match(/^data:(image\/(?:png|jpeg));base64,([A-Za-z0-9+/=]+)$/);
+  if (!m) return _json({ ok: false, error: '画像形式が不正です' });
+  const mime = m[1];
+  const b64 = m[2];
+  if (b64.length > CONFIG.MAX_IMAGE_B64) return _json({ ok: false, error: '画像サイズが大きすぎます' });
+
   const bytes = Utilities.base64Decode(b64);
-  const ext = mime === 'image/png' ? 'png' : (mime === 'image/jpeg' ? 'jpg' : 'bin');
+  if (!_isImageBytes(bytes, mime)) return _json({ ok: false, error: '画像形式が不正です' });
+
+  // 連投・荒らし対策
+  const cache = CacheService.getScriptCache();
+  const who = _hash((client || ua) + '|' + name);
+  if (cache.get('cool_' + who)) return _json({ ok: false, error: '少し時間をおいてから投稿してください' });
+  const dayKey = 'day_' + Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyyMMdd');
+  const today = Number(cache.get(dayKey) || 0);
+  if (today >= CONFIG.DAILY_SUBMIT_CAP) return _json({ ok: false, error: '本日の受付上限に達しました' });
 
   const id = Utilities.getUuid();
-  const timestamp = new Date();
-  const filename = `tcm_snowdome_${Utilities.formatDate(timestamp, 'Asia/Tokyo', 'yyyyMMdd_HHmmss')}_${id.slice(0, 6)}.${ext}`;
+  const now = new Date();
+  const ext = mime === 'image/png' ? 'png' : 'jpg';
+  const filename = 'tcm_snowdome_' + Utilities.formatDate(now, 'Asia/Tokyo', 'yyyyMMdd_HHmmss') + '_' + id.slice(0, 6) + '.' + ext;
 
-  // Drive に保存
   const folder = DriveApp.getFolderById(CONFIG.DRIVE_FOLDER_ID);
-  const blob = Utilities.newBlob(bytes, mime, filename);
-  const file = folder.createFile(blob);
+  const file = folder.createFile(Utilities.newBlob(bytes, mime, filename));
   file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
   const fileId = file.getId();
-  // 画像を直接表示できる URL
-  const imageUrl = `https://lh3.googleusercontent.com/d/${fileId}`;
-
-  // スプシに記録
-  const sheet = _getSheet(CONFIG.SHEET_NAME);
-  // 列: id | timestamp | name | comment | fileId | imageUrl | status | likes | ua
-  sheet.appendRow([
-    id,
-    timestamp,
-    name,
-    comment,
-    fileId,
-    imageUrl,
-    CONFIG.AUTO_APPROVE ? 'approved' : 'pending',
-    0,
-    ua,
-  ]);
-
-  const shareUrl = `${CONFIG.SITE_URL}gallery.html?id=${id}`;
-
-  return _json({
-    ok: true,
-    id,
-    imageUrl,
-    shareUrl,
-  });
-}
-
-/**
- * 投稿一覧の取得
- * params:
- *   limit: 件数（最大50）
- *   offset: 開始位置
- *   sort: 'new' | 'popular'
- */
-function _listPosts(params) {
-  const limit = Math.min(parseInt(params.limit || '24', 10), 50);
-  const offset = parseInt(params.offset || '0', 10);
-  const sort = params.sort || 'new';
-
-  const sheet = _getSheet(CONFIG.SHEET_NAME);
-  const data = sheet.getDataRange().getValues();
-  if (data.length <= 1) return _json({ ok: true, items: [], total: 0 });
-  const rows = data.slice(1);
-
-  // 承認済みのみ
-  let items = rows
-    .filter(r => r[6] === 'approved')
-    .map(r => ({
-      id: r[0],
-      timestamp: new Date(r[1]).getTime(),
-      name: r[2],
-      comment: r[3],
-      imageUrl: r[5],
-      likes: Number(r[7]) || 0,
-    }));
-
-  if (sort === 'popular') {
-    items.sort((a, b) => b.likes - a.likes || b.timestamp - a.timestamp);
-  } else {
-    items.sort((a, b) => b.timestamp - a.timestamp);
-  }
-
-  const total = items.length;
-  items = items.slice(offset, offset + limit);
-
-  return _json({ ok: true, items, total });
-}
-
-/**
- * 1件詳細
- */
-function _detailPost(params) {
-  const id = (params.id || '').toString();
-  if (!id) return _json({ ok: false, error: 'id required' });
-
-  const sheet = _getSheet(CONFIG.SHEET_NAME);
-  const data = sheet.getDataRange().getValues();
-  const rows = data.slice(1);
-  const r = rows.find(x => x[0] === id && x[6] === 'approved');
-  if (!r) return _json({ ok: false, error: 'not found' });
-
-  return _json({
-    ok: true,
-    item: {
-      id: r[0],
-      timestamp: new Date(r[1]).getTime(),
-      name: r[2],
-      comment: r[3],
-      imageUrl: r[5],
-      likes: Number(r[7]) || 0,
-    },
-  });
-}
-
-/**
- * いいね切替
- */
-function _toggleLike(params) {
-  const postId = (params.id || '').toString();
-  const voterId = (params.voter || '').toString().slice(0, 64);
-  const op = params.op || 'add'; // add | remove
-
-  if (!postId || !voterId) return _json({ ok: false, error: 'params required' });
+  const imageUrl = 'https://lh3.googleusercontent.com/d/' + fileId;
 
   const lock = LockService.getScriptLock();
-  lock.waitLock(5000);
+  lock.waitLock(10000);
   try {
-    const likesSheet = _getLikesSheet();
-    const data = likesSheet.getDataRange().getValues();
-    const rows = data.slice(1);
-    const existing = rows.findIndex(r => r[0] === postId && r[1] === voterId);
+    _getSheet(CONFIG.SHEET_NAME).appendRow([
+      id, now, _sheetText(name), _sheetText(comment), fileId, imageUrl,
+      CONFIG.AUTO_APPROVE ? 'approved' : 'pending', 0, _sheetText(ua),
+    ]);
+  } finally {
+    lock.releaseLock();
+  }
 
-    const postsSheet = _getSheet(CONFIG.SHEET_NAME);
-    const postData = postsSheet.getDataRange().getValues();
-    const postIdx = postData.slice(1).findIndex(r => r[0] === postId);
-    if (postIdx < 0) return _json({ ok: false, error: 'post not found' });
+  cache.put('cool_' + who, '1', CONFIG.SUBMIT_COOLDOWN_SEC);
+  cache.put(dayKey, String(today + 1), 6 * 60 * 60);
 
-    let likes = Number(postData[postIdx + 1][7]) || 0;
+  return _json({
+    ok: true,
+    id: id,
+    status: CONFIG.AUTO_APPROVE ? 'approved' : 'pending',
+    imageUrl: imageUrl,
+    shareUrl: CONFIG.SITE_URL + 'gallery.html?id=' + id,
+  });
+}
 
-    if (op === 'add' && existing < 0) {
-      likesSheet.appendRow([postId, voterId, new Date()]);
-      likes++;
-    } else if (op === 'remove' && existing >= 0) {
-      likesSheet.deleteRow(existing + 2);
-      likes = Math.max(0, likes - 1);
+// ───────── 一覧・詳細 ─────────
+function _listPosts(p) {
+  const limit = Math.max(1, Math.min(parseInt(p.limit || '24', 10) || 24, 50));
+  const offset = Math.max(0, parseInt(p.offset || '0', 10) || 0);
+  const sort = p.sort === 'popular' ? 'popular' : 'new';
+
+  let items = _approvedItems();
+  if (sort === 'popular') items.sort((a, b) => b.likes - a.likes || b.timestamp - a.timestamp);
+  else items.sort((a, b) => b.timestamp - a.timestamp);
+
+  return _json({ ok: true, items: items.slice(offset, offset + limit), total: items.length });
+}
+
+function _detailPost(p) {
+  const id = String(p.id || '');
+  if (!id) return _json({ ok: false, error: 'id required' });
+  const item = _approvedItems().find(x => x.id === id);
+  return item ? _json({ ok: true, item: item }) : _json({ ok: false, error: 'not found' });
+}
+
+function _approvedItems() {
+  const data = _getSheet(CONFIG.SHEET_NAME).getDataRange().getValues().slice(1);
+  return data
+    .filter(r => String(r[COL.status - 1]).trim() === 'approved')
+    .map(r => ({
+      id: String(r[COL.id - 1]),
+      timestamp: new Date(r[COL.timestamp - 1]).getTime(),
+      name: String(r[COL.name - 1]).replace(/^'/, ''),
+      comment: String(r[COL.comment - 1]).replace(/^'/, ''),
+      imageUrl: String(r[COL.imageUrl - 1]),
+      likes: Number(r[COL.likes - 1]) || 0,
+    }));
+}
+
+// ───────── いいね ─────────
+function _toggleLike(p) {
+  const postId = String(p.id || '').slice(0, 64);
+  const voterId = String(p.voter || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 64);
+  const op = p.op === 'remove' ? 'remove' : 'add';
+  if (!postId || voterId.length < 8) return _json({ ok: false, error: 'params required' });
+
+  const cache = CacheService.getScriptCache();
+  const rk = 'like_' + _hash(voterId);
+  const n = Number(cache.get(rk) || 0);
+  if (n > 30) return _json({ ok: false, error: 'too many requests' });
+  cache.put(rk, String(n + 1), 60);
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    const posts = _getSheet(CONFIG.SHEET_NAME);
+    const postData = posts.getDataRange().getValues();
+    const idx = postData.findIndex((r, i) => i > 0 && String(r[COL.id - 1]) === postId);
+    if (idx < 0 || String(postData[idx][COL.status - 1]).trim() !== 'approved') {
+      return _json({ ok: false, error: 'post not found' });
     }
 
-    postsSheet.getRange(postIdx + 2, 8).setValue(likes);
-    return _json({ ok: true, likes });
+    const likesSheet = _getLikesSheet();
+    const likeData = likesSheet.getDataRange().getValues();
+    const existing = likeData.findIndex((r, i) => i > 0 && String(r[0]) === postId && String(r[1]) === voterId);
+
+    if (op === 'add' && existing < 0) likesSheet.appendRow([postId, voterId, new Date()]);
+    if (op === 'remove' && existing > 0) likesSheet.deleteRow(existing + 1);
+
+    // 実数で再集計（ズレ防止）
+    let likes = 0;
+    const after = likesSheet.getDataRange().getValues();
+    for (let i = 1; i < after.length; i++) if (String(after[i][0]) === postId) likes++;
+    posts.getRange(idx + 1, COL.likes).setValue(likes);
+    return _json({ ok: true, likes: likes });
   } finally {
     lock.releaseLock();
   }
 }
 
 // ───────── ヘルパー ─────────
+function _ss() {
+  const id = PropertiesService.getScriptProperties().getProperty('SPREADSHEET_ID') || CONFIG.DEFAULT_SPREADSHEET_ID;
+  return SpreadsheetApp.openById(id);
+}
+
 function _getSheet(name) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = _ss();
   let sh = ss.getSheetByName(name);
   if (!sh) {
     sh = ss.insertSheet(name);
@@ -241,7 +210,7 @@ function _getSheet(name) {
 }
 
 function _getLikesSheet() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const ss = _ss();
   let sh = ss.getSheetByName(CONFIG.LIKES_SHEET_NAME);
   if (!sh) {
     sh = ss.insertSheet(CONFIG.LIKES_SHEET_NAME);
@@ -251,17 +220,57 @@ function _getLikesSheet() {
   return sh;
 }
 
-function _json(obj) {
-  return ContentService
-    .createTextOutput(JSON.stringify(obj))
-    .setMimeType(ContentService.MimeType.JSON);
+function _clean(v, max) {
+  return String(v || '')
+    .replace(/[\u0000-\u001F\u007F​-‏‪-‮]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, max);
 }
 
-/**
- * 動作確認用：管理者が実行すると最新5件をログ出力
- */
+// スプレッドシートの数式インジェクション防止
+function _sheetText(v) {
+  return /^[=+@-]/.test(v) ? "'" + v : v;
+}
+
+function _isImageBytes(bytes, mime) {
+  const b = bytes.slice(0, 4).map(x => (x + 256) % 256);
+  if (mime === 'image/png') return b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4E && b[3] === 0x47;
+  return b[0] === 0xFF && b[1] === 0xD8 && b[2] === 0xFF;
+}
+
+function _hash(s) {
+  const d = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(s));
+  return Utilities.base64EncodeWebSafe(d).slice(0, 22);
+}
+
+function _json(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
+
+// ───────── 管理者用（エディタから実行） ─────────
+
+/** シート作成と status 列の承認プルダウンを設定 */
+function setup() {
+  const props = PropertiesService.getScriptProperties();
+  if (!props.getProperty('SPREADSHEET_ID')) props.setProperty('SPREADSHEET_ID', CONFIG.DEFAULT_SPREADSHEET_ID);
+  const sh = _getSheet(CONFIG.SHEET_NAME);
+  _getLikesSheet();
+  const rule = SpreadsheetApp.newDataValidation().requireValueInList(STATUS, true).setAllowInvalid(false).build();
+  sh.getRange(2, COL.status, sh.getMaxRows() - 1, 1).setDataValidation(rule);
+  console.log('OK: ' + _ss().getUrl());
+}
+
+/** テスト投稿（smoke test の残骸）を非掲載にする */
+function hideTestPosts() {
+  const sh = _getSheet(CONFIG.SHEET_NAME);
+  const data = sh.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (/test|テスト|smoke/i.test(String(data[i][COL.name - 1]))) sh.getRange(i + 1, COL.status).setValue('rejected');
+  }
+}
+
+/** 最新5件をログ出力 */
 function debug_listRecent() {
-  const sheet = _getSheet(CONFIG.SHEET_NAME);
-  const data = sheet.getDataRange().getValues();
-  console.log(data.slice(0, 6));
+  console.log(_getSheet(CONFIG.SHEET_NAME).getDataRange().getValues().slice(-5));
 }

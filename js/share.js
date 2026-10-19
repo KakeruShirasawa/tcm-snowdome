@@ -15,6 +15,18 @@ function shareToLine() {
   window.open(url, '_blank', 'noopener,noreferrer');
 }
 
+// 端末ごとの匿名ID（連投防止用）
+function _snowdomeClientId() {
+  try {
+    let id = localStorage.getItem('tcm_snowdome_client');
+    if (!id) {
+      id = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(36).slice(2)).replace(/[^A-Za-z0-9]/g, '');
+      localStorage.setItem('tcm_snowdome_client', id);
+    }
+    return id;
+  } catch (e) { return ''; }
+}
+
 // ───────── コンテスト投稿モーダル ─────────
 function openContestModal() {
   document.getElementById('contestModal').classList.add('open');
@@ -47,16 +59,17 @@ async function submitContest() {
   btn.textContent = '送信中...';
 
   try {
-    // GAS WebApp は FormData の方が CORS プリフライトを回避できる
-    const fd = new FormData();
-    fd.append('action', 'submit');
-    fd.append('name', name);
-    fd.append('comment', comment);
-    fd.append('image', dataUrl); // dataURL のまま送信
-    fd.append('ua', navigator.userAgent);
+    // GAS WebApp は URLエンコード形式で送る（CORSプリフライト回避・e.parameter で受け取れる）
+    const body = new URLSearchParams();
+    body.append('action', 'submit');
+    body.append('name', name);
+    body.append('comment', comment);
+    body.append('image', dataUrl); // dataURL のまま送信
+    body.append('ua', navigator.userAgent);
+    body.append('client', _snowdomeClientId());
 
     if (!CONFIG.GAS_WEBAPP_URL || CONFIG.GAS_WEBAPP_URL.includes('REPLACE_WITH')) { throw new Error('コンテスト投稿は準備中です'); }
-    const res = await fetch(CONFIG.GAS_WEBAPP_URL, { method: 'POST', body: fd });
+    const res = await fetch(CONFIG.GAS_WEBAPP_URL, { method: 'POST', body });
     const result = await res.json();
 
     if (result.ok) {
