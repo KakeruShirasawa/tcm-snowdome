@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>スノードームコンテスト｜東京クリスマスマーケット2026</title>
+<meta name="description" content="みんなが作ったオリジナルスノードームを見てみよう。東京クリスマスマーケット公式スノードームコンテスト。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=Playfair+Display:ital,wght@0,400;0,500;1,400;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/common.css">
+<link rel="stylesheet" href="css/gallery.css">
+</head>
+<body>
+
+<div class="sky-bg"></div>
+
+<header class="site-header">
+  <p class="brand">Tokyo Christmas Market 2026</p>
+  <nav class="nav">
+    <a href="index.html"><span class="roman">I</span>つくる</a>
+    <a href="gallery.html" class="active"><span class="roman">II</span>ギャラリー</a>
+  </nav>
+</header>
+
+<div class="arch-decoration"></div>
+
+<div class="title-block">
+  <p class="tagline">Weihnachtsgalerie</p>
+  <h1><span class="nw">みんなの<span class="accent">スノードーム</span></span><span class="nw">コンテスト</span></h1>
+  <p class="subtitle">S  N  O  W  G  L  O  B  E   C  O  N  T  E  S  T</p>
+  <p style="font-size: 12px; color: var(--text-light-dim); margin: 10px 0 0; font-family: var(--font-serif-en); font-style: italic; letter-spacing: 0.05em;">
+    Contest Period: <span id="periodLabel"></span>
+  </p>
+</div>
+
+<div class="gallery-controls">
+  <div class="sort-tabs">
+    <button data-sort="new" class="active">新着</button>
+    <button data-sort="popular">人気順</button>
+  </div>
+  <div class="gallery-count" id="galleryCount">読み込み中...</div>
+  <a href="index.html" class="btn btn-primary btn-sm">
+    <span>自分の作品を投稿</span>
+  </a>
+</div>
+
+<div class="gallery-grid" id="galleryGrid"></div>
+
+<div class="gallery-loading" id="galleryLoading">
+  <div class="spinner"></div>
+</div>
+
+<div class="load-more">
+  <button class="btn" id="loadMoreBtn" style="display:none;">もっと見る</button>
+</div>
+
+<div class="cta-make">
+  <a href="index.html" class="btn-start">
+    <span class="label-en">START</span>
+    <span class="label-jp">自分だけのスノードームを作る</span>
+  </a>
+</div>
+
+<!-- 詳細モーダル -->
+<div class="modal-overlay" id="detailModal">
+  <div class="modal detail-modal">
+    <button class="modal-close" onclick="closeDetail()" style="color: #fff; background: rgba(0,0,0,0.5); z-index: 10;">×</button>
+    <img class="detail-img" src="" alt="">
+    <div class="detail-body">
+      <h2 class="detail-name"></h2>
+      <p class="detail-comment"></p>
+      <div class="detail-actions">
+        <button class="btn" data-share-x>𝕏 でシェア</button>
+        <button class="btn" data-copy-link>リンクをコピー</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="site-footer">
+  Tokyo Christmas Market 2026 — Snow Globe Contest
+</footer>
+
+<script src="js/config.js"></script>
+<script src="js/gallery.js"></script>
+<script>
+  document.getElementById('periodLabel').textContent = CONFIG.CONTEST_PERIOD;
+</script>
+
+</body>
+</html>
