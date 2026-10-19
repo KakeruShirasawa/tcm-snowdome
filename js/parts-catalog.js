@@ -935,13 +935,14 @@ PARTS_CATALOG.porcelain = [
 ];
 
 // ───────── 東京クリスマスマーケット オリジナル ─────────
-// キャラクター：クリスマスピラミッドの妖精（スタイルガイド 2026.10.13 より）
+// キャラクター：くしゅまる（クリスマスピラミッドの妖精）と、いつも一緒のピンクの妖精（名前未定）
+// スタイルガイド 2026.10.13 より
 PARTS_CATALOG.tcmChara = [
-  { id: 'tcm-chara-wave',  name: 'ピラミッドの妖精', trueColor: true, img: 'assets/tcm/chara_wave.webp',  w: 150, h: 149 },
-  { id: 'tcm-chara-front', name: '妖精（正面）',     trueColor: true, img: 'assets/tcm/chara_front.webp', w: 155, h: 152 },
-  { id: 'tcm-chara-fly',   name: '妖精（とぶ）',     trueColor: true, img: 'assets/tcm/chara_fly.webp',   w: 150, h: 140 },
-  { id: 'tcm-chara-side',  name: '妖精（よこ）',     trueColor: true, img: 'assets/tcm/chara_side.webp',  w: 100, h: 144 },
-  { id: 'tcm-fairy',       name: 'ふわふわ妖精',     trueColor: true, img: 'assets/tcm/fairy.webp',       w: 46,  h: 70 },
+  { id: 'tcm-chara-wave',  name: 'くしゅまる', trueColor: true, img: 'assets/tcm/chara_wave.webp',  w: 150, h: 149 },
+  { id: 'tcm-chara-front', name: 'くしゅまる（正面）',     trueColor: true, img: 'assets/tcm/chara_front.webp', w: 155, h: 152 },
+  { id: 'tcm-chara-fly',   name: 'くしゅまる（とぶ）',     trueColor: true, img: 'assets/tcm/chara_fly.webp',   w: 150, h: 140 },
+  { id: 'tcm-chara-side',  name: 'くしゅまる（よこ）',     trueColor: true, img: 'assets/tcm/chara_side.webp',  w: 100, h: 144 },
+  { id: 'tcm-fairy',       name: 'ピンクの妖精',     trueColor: true, img: 'assets/tcm/fairy.webp',       w: 46,  h: 70 },
 ];
 // 会場の名物（写真から切り抜き）＋マーケットらしいパーツ
 PARTS_CATALOG.tcm = [

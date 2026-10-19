@@ -50,7 +50,7 @@ function init() {
   placeDefaultScene();
 }
 
-// 最初に開いたときの中身：TCMのピラミッドと、ピラミッドの妖精
+// 最初に開いたときの中身：TCMのピラミッドと、くしゅまる
 async function placeDefaultScene() {
   try {
     const P = PARTS_CATALOG;
