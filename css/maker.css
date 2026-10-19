@@ -833,3 +833,6 @@ button.particle-card {
 /* パネル内のゴーストボタン（明るい背景で文字が消えないように） */
 .atelier-panel a.btn-ghost, .atelier-panel button.btn-ghost { color: var(--tcm-navy); border-color: var(--tcm-gold); background: transparent; }
 .atelier-panel a.btn-ghost:hover { background: rgba(201,166,107,0.12); }
+
+/* 白っぽいパーツ（ガラスのくつ等）もタイルで見えるように */
+.part-tile .thumb img { filter: drop-shadow(0 0 1px rgba(27, 42, 82, 0.45)) drop-shadow(0 1px 2px rgba(27, 42, 82, 0.2)); }

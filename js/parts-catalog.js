@@ -935,25 +935,51 @@ PARTS_CATALOG.porcelain = [
 ];
 
 // ───────── 東京クリスマスマーケット オリジナル ─────────
+// hang: 天井から吊るす（drop = ひもの長さ）／ lift: 宙に浮かせる高さ ／ trueColor: 色調補正をかけない
 // キャラクター：くしゅまる（クリスマスピラミッドの妖精）と、いつも一緒のピンクの妖精（名前未定）
 // スタイルガイド 2026.10.13 より
 PARTS_CATALOG.tcmChara = [
-  { id: 'tcm-chara-wave',  name: 'くしゅまる', trueColor: true, img: 'assets/tcm/chara_wave.webp',  w: 150, h: 149 },
-  { id: 'tcm-chara-front', name: 'くしゅまる（正面）',     trueColor: true, img: 'assets/tcm/chara_front.webp', w: 155, h: 152 },
-  { id: 'tcm-chara-fly',   name: 'くしゅまる（とぶ）',     trueColor: true, img: 'assets/tcm/chara_fly.webp',   w: 150, h: 140 },
-  { id: 'tcm-chara-side',  name: 'くしゅまる（よこ）',     trueColor: true, img: 'assets/tcm/chara_side.webp',  w: 100, h: 144 },
-  { id: 'tcm-fairy',       name: 'ピンクの妖精',     trueColor: true, img: 'assets/tcm/fairy.webp',       w: 46,  h: 70 },
+  { id: 'tcm-chara-wave',  name: 'くしゅまる',         trueColor: true, img: 'assets/tcm/chara_wave.webp',  w: 150, h: 149 },
+  { id: 'tcm-chara-front', name: 'くしゅまる（正面）', trueColor: true, img: 'assets/tcm/chara_front.webp', w: 155, h: 152 },
+  { id: 'tcm-chara-fly',   name: 'くしゅまる（とぶ）', trueColor: true, img: 'assets/tcm/chara_fly.webp',   w: 150, h: 140, lift: 0.5 },
+  { id: 'tcm-chara-side',  name: 'くしゅまる（よこ）', trueColor: true, img: 'assets/tcm/chara_side.webp',  w: 100, h: 144 },
+  { id: 'tcm-fairy',       name: 'ピンクの妖精',       trueColor: true, img: 'assets/tcm/fairy.webp',       w: 46,  h: 70, lift: 0.55 },
 ];
 // 会場の名物（写真から切り抜き）＋マーケットらしいパーツ
 PARTS_CATALOG.tcm = [
-  { id: 'tcm-pyramid', name: 'TCMのピラミッド', trueColor: true, img: 'assets/tcm/pyramid.webp', w: 104, h: 306 },
-  { id: 'tcm-star',    name: 'ヘルンフートの星', trueColor: true, img: 'assets/tcm/star.webp',    w: 112, h: 110 },
+  { id: 'tcm-pyramid', name: 'TCMのピラミッド', trueColor: true, img: 'assets/tcm/pyramid.webp', w: 124, h: 336 },
+  { id: 'tcm-star',    name: 'ヘルンフートの星', trueColor: true, img: 'assets/tcm/star.webp', w: 92, h: 90, hang: true, drop: 0.28 },
   { id: 'tcm-krippe',  name: 'クリッペ（降誕の飾り）', trueColor: true, img: 'assets/tcm/krippe.webp', w: 212, h: 160 },
+  { id: 'tcm-mug-red',  name: '2026マグ（赤）', trueColor: true, img: 'assets/tcm/mug_red.webp',  w: 96, h: 82 },
+  { id: 'tcm-mug-navy', name: '2026マグ（紺）', trueColor: true, img: 'assets/tcm/mug_navy.webp', w: 96, h: 85 },
   PARTS_CATALOG.objects.find((p) => p.id === 'obj-pyramid'),
   PARTS_CATALOG.objects.find((p) => p.id === 'obj-hutte'),
   PARTS_CATALOG.decorations.find((p) => p.id === 'deco-mug'),
   PARTS_CATALOG.objects.find((p) => p.id === 'obj-tree'),
 ].filter(Boolean);
+// 2026マグカップに描かれたキャラクターたち（マグのデザインデータより）
+const MUG = (id, name, w, h, extra = {}) => ({ id: 'mug-' + id, name, trueColor: true, img: `assets/tcm/mug/${id}.webp`, w, h, ...extra });
+PARTS_CATALOG.tcmMug = [
+  MUG('santa', 'サンタ', 92, 142), MUG('reindeer', 'トナカイ', 80, 147), MUG('snowman', '雪だるま', 84, 140),
+  MUG('snowman_hat', 'シルクハットの雪だるま', 74, 147), MUG('gnome', 'ノーム', 66, 147), MUG('angel', '天使', 120, 101, { lift: 0.45 }),
+  MUG('bird', '小鳥', 96, 82, { lift: 0.4 }), MUG('redhood', '赤ずきん', 110, 147), MUG('wolf', 'オオカミ', 96, 147),
+  MUG('puss', '長ぐつをはいたネコ', 94, 147), MUG('snowwhite', '白雪姫', 107, 146), MUG('cinderella', 'シンデレラ', 109, 147),
+  MUG('slipper', 'ガラスのくつ', 48, 43), MUG('deer_rider', 'トナカイに乗った小人', 114, 147),
+  MUG('dwarf1', '小人1', 60, 91), MUG('dwarf2', '小人2', 66, 90), MUG('dwarf3', '小人3', 66, 90), MUG('dwarf4', '小人4', 66, 90),
+  MUG('dwarf5', '小人5', 60, 90), MUG('dwarf6', '小人6', 60, 90), MUG('dwarf7', '小人7', 66, 90),
+];
+// アパマングループのキャラクター
+PARTS_CATALOG.apaman = [
+  { id: 'apa-bear',       name: 'ベアくん',           trueColor: true, img: 'assets/apaman/bear.webp',       w: 108, h: 142 },
+  { id: 'apa-hani',       name: 'ハニちゃん',         trueColor: true, img: 'assets/apaman/hani_front.webp', w: 92,  h: 140 },
+  { id: 'apa-hani-side',  name: 'ハニちゃん（よこ）', trueColor: true, img: 'assets/apaman/hani_side.webp',  w: 87,  h: 132 },
+  { id: 'apa-hani-back',  name: 'ハニちゃん（うしろ）', trueColor: true, img: 'assets/apaman/hani_back.webp', w: 90,  h: 132 },
+];
+// 吊るすと自然なもの
+['deco-ornament_red', 'deco-ornament_gold', 'deco-star', 'deco-bell', 'deco-wreath'].forEach((id) => {
+  const d = PARTS_CATALOG.decorations.find((p) => p.id === id);
+  if (d) Object.assign(d, { hang: true, drop: 0.22 });
+});
 
 // パーツSVGを色適用した状態で返す（画像パーツは <img>）
 function renderPartSvg(part, color) {

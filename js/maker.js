@@ -16,7 +16,7 @@ const State = {
 
 // パーツのカテゴリ（画像が入っているものだけ表示）
 const PART_CATEGORIES = [
-  ['tcmChara', '★TCMキャラ'], ['tcm', '★TCMマーケット'], ['characters', 'キャラ'], ['porcelain', '磁器コレクション'], ['animals', 'どうぶつ'], ['people', 'ひと'], ['objects', 'オブジェ'],
+  ['tcmChara', '★くしゅまる'], ['tcm', '★TCMマーケット'], ['tcmMug', '★マグのなかま'], ['apaman', 'ベアくん＆ハニちゃん'], ['characters', 'キャラ'], ['porcelain', '磁器コレクション'], ['animals', 'どうぶつ'], ['people', 'ひと'], ['objects', 'オブジェ'],
   ['buildings', '街と乗り物'], ['nature', '木と自然'], ['food', '食べもの'], ['toys', '雑貨・おもちゃ'], ['decorations', 'デコ'],
 ];
 
@@ -61,8 +61,9 @@ async function placeDefaultScene() {
       p.x = x; p.z = z; p.scale = scale;
       globe.updatePart(id, {});
     };
-    await put(P.tcm.find((c) => c.id === 'tcm-pyramid'), -0.14, -0.3, 1.15);
+    await put(P.tcm.find((c) => c.id === 'tcm-pyramid'), -0.14, -0.3, 1.0);
     await put(P.tcmChara.find((c) => c.id === 'tcm-chara-wave'), 0.34, 0.2, 0.95);
+    await put(P.tcm.find((c) => c.id === 'tcm-star'), 0.36, -0.2, 0.9);
     globe.select(null);
   } catch (e) { console.warn(e); }
 }

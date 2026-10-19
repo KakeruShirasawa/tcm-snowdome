@@ -968,8 +968,15 @@ export class Globe {
     const part = {
       id, cat, mesh, color: color || cat.defaultColor, alpha: alphaMask(source),
       w: (cat.w || 120) * UNIT, h: (cat.h || 120) * UNIT,
-      x: ((n % 5) - 2) * 0.22, z: 0.05 + ((n / 5) | 0) * 0.08 - 0.1, scale: 1, rotY: 0, lift: 0,
+      x: ((n % 5) - 2) * 0.22, z: 0.05 + ((n / 5) | 0) * 0.08 - 0.1, scale: 1, rotY: 0, lift: cat.lift || 0,
+      hang: !!cat.hang,
     };
+    if (part.hang) {
+      // 吊るすもの：lift は「天井からのひもの長さ」として使う
+      part.lift = cat.drop ?? 0.25;
+      part.string = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 1, 6), new THREE.MeshStandardMaterial({ color: 0xc9a66b, metalness: 0.8, roughness: 0.35 }));
+      this.partGroup.add(part.string);
+    }
     mesh.userData.partId = id;
     this.parts.set(id, part);
     this.partGroup.add(mesh);
@@ -1004,7 +1011,7 @@ export class Globe {
     if (!p) return;
     if (delta.scale) p.scale = Math.min(2.6, Math.max(0.35, p.scale * delta.scale));
     if (delta.rotY) p.rotY += delta.rotY;
-    if (delta.lift) p.lift = Math.min(1.2, Math.max(0, p.lift + delta.lift));
+    if (delta.lift) p.lift = p.hang ? Math.min(1.1, Math.max(0.04, p.lift - delta.lift)) : Math.min(1.2, Math.max(0, p.lift + delta.lift));
     if (delta.flip) p.flip = !p.flip;
     this._placePart(p);
     this._updateSelRing();
@@ -1014,6 +1021,7 @@ export class Globe {
     const p = this.parts.get(id);
     if (!p) return;
     this.partGroup.remove(p.mesh);
+    if (p.string) { this.partGroup.remove(p.string); p.string.geometry.dispose(); p.string.material.dispose(); }
     p.mesh.geometry.dispose(); p.mesh.material.map.dispose(); p.mesh.material.dispose();
     this.parts.delete(id);
     if (this.selectedId === id) this.select(null);
@@ -1027,7 +1035,40 @@ export class Globe {
     this.onSelect(id ? this.parts.get(id) : null);
   }
 
+  // その位置の天井（ドーム内側の一番高いところ）
+  _ceilingAt(x, z) {
+    const s = this.spec;
+    let lo = s.groundY + 0.05, hi = s.topY + 0.2;
+    if (!s.inside(x, lo, z)) return lo;
+    for (let i = 0; i < 18; i++) { const m = (lo + hi) / 2; if (s.inside(x, m, z)) lo = m; else hi = m; }
+    return lo;
+  }
+
+  _placeHanging(p) {
+    const spec = this.spec;
+    // 中心寄りに収める（天井の低い端では吊るせないため）
+    let k = 1;
+    const fits = (x, z) => {
+      const W = p.w * p.scale, H = p.h * p.scale;
+      const top = this._ceilingAt(x, z) - p.lift;
+      return spec.inside(x, top - H, z) && spec.inside(x - W * 0.3, top - H * 0.5, z) && spec.inside(x + W * 0.3, top - H * 0.5, z) && top - H > spec.groundY + 0.12;
+    };
+    while (!fits(p.x * k, p.z * k) && k > 0) k -= 0.05;
+    p.x *= Math.max(k, 0); p.z *= Math.max(k, 0);
+    let guard = 0;
+    while (!fits(p.x, p.z) && guard++ < 30) { if (p.lift > 0.06) p.lift *= 0.9; else if (p.scale > 0.35) p.scale *= 0.95; else break; }
+    const W = p.w * p.scale, H = p.h * p.scale;
+    const ceil = this._ceilingAt(p.x, p.z);
+    const top = ceil - p.lift;
+    p.mesh.scale.set(p.flip ? -W : W, H, 1);
+    p.mesh.position.set(p.x, top - H, p.z);
+    const len = Math.max(0.01, ceil - top + H * 0.08);
+    p.string.scale.set(1, len, 1);
+    p.string.position.set(p.x, ceil - len / 2, p.z);
+  }
+
   _placePart(p) {
+    if (p.hang) return this._placeHanging(p);
     const spec = this.spec;
     const w = p.w * p.scale, h = p.h * p.scale;
     // 地面の内側に収める（中心と左右端を判定し、だめなら中心へ寄せる）
