@@ -16,7 +16,7 @@ const State = {
 
 // パーツのカテゴリ（画像が入っているものだけ表示）
 const PART_CATEGORIES = [
-  ['tcmChara', '★くしゅまる'], ['tcm', '★TCMマーケット'], ['tcmMug', '★マグのなかま'], ['apaman', 'ベアくん＆ハニちゃん'], ['characters', 'キャラ'], ['porcelain', '磁器コレクション'], ['animals', 'どうぶつ'], ['people', 'ひと'], ['objects', 'オブジェ'],
+  ['tcmChara', '★くしゅまる'], ['tcm', '★TCMマーケット'], ['tcmMug', '★マグのなかま'], ['apaman', 'べあ～君＆ハニちゃん'], ['characters', 'キャラ'], ['porcelain', '磁器コレクション'], ['animals', 'どうぶつ'], ['people', 'ひと'], ['objects', 'オブジェ'],
   ['buildings', '街と乗り物'], ['nature', '木と自然'], ['food', '食べもの'], ['toys', '雑貨・おもちゃ'], ['decorations', 'デコ'],
 ];
 

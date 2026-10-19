@@ -968,12 +968,10 @@ PARTS_CATALOG.tcmMug = [
   MUG('dwarf1', '小人1', 60, 91), MUG('dwarf2', '小人2', 66, 90), MUG('dwarf3', '小人3', 66, 90), MUG('dwarf4', '小人4', 66, 90),
   MUG('dwarf5', '小人5', 60, 90), MUG('dwarf6', '小人6', 60, 90), MUG('dwarf7', '小人7', 66, 90),
 ];
-// アパマングループのキャラクター
+// アパマンショップ公式キャラクター（公式のぬいぐるみ写真で統一）
 PARTS_CATALOG.apaman = [
-  { id: 'apa-bear',       name: 'ベアくん',           trueColor: true, img: 'assets/apaman/bear.webp',       w: 108, h: 142 },
-  { id: 'apa-hani',       name: 'ハニちゃん',         trueColor: true, img: 'assets/apaman/hani_front.webp', w: 92,  h: 140 },
-  { id: 'apa-hani-side',  name: 'ハニちゃん（よこ）', trueColor: true, img: 'assets/apaman/hani_side.webp',  w: 87,  h: 132 },
-  { id: 'apa-hani-back',  name: 'ハニちゃん（うしろ）', trueColor: true, img: 'assets/apaman/hani_back.webp', w: 90,  h: 132 },
+  { id: 'apa-bear', name: 'べあ～君',   trueColor: true, img: 'assets/apaman/bear.webp', w: 112, h: 148 },
+  { id: 'apa-hani', name: 'ハニちゃん', trueColor: true, img: 'assets/apaman/hani.webp', w: 106, h: 141 },
 ];
 // 吊るすと自然なもの
 ['deco-ornament_red', 'deco-ornament_gold', 'deco-star', 'deco-bell', 'deco-wreath'].forEach((id) => {
