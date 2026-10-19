@@ -949,11 +949,18 @@ export class Globe {
     const geo = new THREE.PlaneGeometry(1, 1);
     geo.translate(0, 0.5, 0);
     const st = PART_STYLES[this.styleKey || 'painted'];
+    // 公式キャラ・会場写真は色を変えない（磁器風の色調補正をかけず、トーンマップも外して本来の色で）
+    const trueColor = !!cat.trueColor;
     const mat = new THREE.MeshStandardMaterial({
-      map: tex, alphaTest: 0.45, side: THREE.DoubleSide, roughness: st.roughness, metalness: st.metalness,
-      normalMap: normalMapFrom(source, cat.img || null), normalScale: new THREE.Vector2(st.normal, st.normal),
+      map: tex, alphaTest: 0.45, side: THREE.DoubleSide, roughness: trueColor ? 0.75 : st.roughness, metalness: trueColor ? 0 : st.metalness,
+      normalMap: normalMapFrom(source, cat.img || null), normalScale: new THREE.Vector2(trueColor ? 0.25 : st.normal, trueColor ? 0.25 : st.normal),
     });
-    applyStyleShader(mat);
+    if (trueColor) {
+      // 照明の当たり方は残しつつ、白飛び・色あせしないように
+      mat.toneMapped = false;
+      mat.color.setScalar(0.78);
+      mat.emissiveMap = tex; mat.emissive.setScalar(0.22);
+    } else applyStyleShader(mat);
     const mesh = new THREE.Mesh(geo, mat);
     mesh.castShadow = true;
     mesh.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: tex, alphaTest: 0.45 });
@@ -976,6 +983,7 @@ export class Globe {
     this.styleKey = key;
     styleUniform.value = st.id;
     this.parts.forEach((p) => {
+      if (p.cat.trueColor) return;
       Object.assign(p.mesh.material, { roughness: st.roughness, metalness: st.metalness });
       p.mesh.material.normalScale.set(st.normal, st.normal);
     });
@@ -1318,20 +1326,24 @@ export class Globe {
     return [0, s.groundY + 0.3, 0];
   }
 
-  // 粒をドーム全体にふんわり浮かべた状態にする（固まって積もった状態からは始めない）
-  _resetParticles() {
+  // 始まりの状態：大半は床に薄く積もった雪（積雪の層として見せる）、残りがふんわり舞っている
+  _resetParticles(floating = 0.28) {
     if (!this.points || !this.spec) return;
     const pos = this.points.geometry.attributes.position;
     const s = this.spec, gy = s.groundY;
+    let settled = 0;
     for (let i = 0; i < PARTICLE_MAX; i++) {
-      const [x, y, z] = this._randomInSlice(gy + 0.05, s.topY - 0.04);
-      pos.setXYZ(i, x, y, z);
       this.pRest[i] = gy + 0.012 + Math.random() * 0.02;
-      this.pSettled[i] = 0; this.pSpread[i] = 0;
+      this.pSpread[i] = 0;
       this.pv[i * 3] = this.pv[i * 3 + 2] = 0; this.pv[i * 3 + 1] = -0.02;
+      const [x, y, z] = this._randomInSlice(gy + 0.05, s.topY - 0.04);
+      if (Math.random() > floating && s.inside(x, gy + 0.06, z)) {
+        pos.setXYZ(i, x, this.pRest[i], z); this.pSettled[i] = 1; if (i < this.pCount) settled++;
+      } else { pos.setXYZ(i, x, y, z); this.pSettled[i] = 0; }
     }
     pos.needsUpdate = true;
-    this.layerOpacity = 0;
+    const P = this.preset || {};
+    this.layerOpacity = P.fall < 0 ? 0 : Math.min(1, settled / (this.pCount * 0.45)) * (P.group === 'snow' || !P.group ? 0.95 : 0.5);
   }
 
   _gravityLocal() {
@@ -1446,7 +1458,7 @@ export class Globe {
           x = rx; z = rz; y = s.groundY + 0.05;
         }
       }
-      if (this.pSettled[i]) { a *= 0.85; if (this.pSettled[i] === 1) onGround++; }
+      if (this.pSettled[i]) { a *= this.pSettled[i] === 1 ? 0.45 : 0.85; if (this.pSettled[i] === 1) onGround++; }
       pos.array[o] = x; pos.array[o + 1] = y; pos.array[o + 2] = z;
       alpha.array[i] = a;
     }

@@ -16,7 +16,7 @@ const State = {
 
 // パーツのカテゴリ（画像が入っているものだけ表示）
 const PART_CATEGORIES = [
-  ['characters', 'キャラ'], ['porcelain', '磁器コレクション'], ['animals', 'どうぶつ'], ['people', 'ひと'], ['objects', 'オブジェ'],
+  ['tcmChara', '★TCMキャラ'], ['tcm', '★TCMマーケット'], ['characters', 'キャラ'], ['porcelain', '磁器コレクション'], ['animals', 'どうぶつ'], ['people', 'ひと'], ['objects', 'オブジェ'],
   ['buildings', '街と乗り物'], ['nature', '木と自然'], ['food', '食べもの'], ['toys', '雑貨・おもちゃ'], ['decorations', 'デコ'],
 ];
 
@@ -47,6 +47,24 @@ function init() {
   if (State.background === 'none') globe.setBackground({ none: true });
   else setBackground(PARTS_CATALOG.backgrounds.find((b) => b.id === State.background));
   document.body.classList.add('globe-ready');
+  placeDefaultScene();
+}
+
+// 最初に開いたときの中身：TCMのピラミッドと、ピラミッドの妖精
+async function placeDefaultScene() {
+  try {
+    const P = PARTS_CATALOG;
+    const put = async (cat, x, z, scale = 1) => {
+      if (!cat) return;
+      const id = await globe.addPart(cat);
+      const p = globe.parts.get(id);
+      p.x = x; p.z = z; p.scale = scale;
+      globe.updatePart(id, {});
+    };
+    await put(P.tcm.find((c) => c.id === 'tcm-pyramid'), -0.14, -0.3, 1.15);
+    await put(P.tcmChara.find((c) => c.id === 'tcm-chara-wave'), 0.34, 0.2, 0.95);
+    globe.select(null);
+  } catch (e) { console.warn(e); }
 }
 
 // ───────── 選択肢パネル ─────────
@@ -257,7 +275,7 @@ function initPartsPanel() {
     });
     wrap.appendChild(b);
   });
-  renderPartsGrid('characters');
+  renderPartsGrid('tcmChara');
 }
 
 function initStepTabs() {

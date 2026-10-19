@@ -829,3 +829,7 @@ button.particle-card {
 .flip-hint.show { opacity: 1; }
 .flip-hint.done { opacity: 0 !important; }
 @keyframes fhSwipe { 0%, 100% { transform: translateX(-10px) rotate(-12deg); } 50% { transform: translateX(10px) rotate(12deg); } }
+
+/* パネル内のゴーストボタン（明るい背景で文字が消えないように） */
+.atelier-panel a.btn-ghost, .atelier-panel button.btn-ghost { color: var(--tcm-navy); border-color: var(--tcm-gold); background: transparent; }
+.atelier-panel a.btn-ghost:hover { background: rgba(201,166,107,0.12); }
