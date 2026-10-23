@@ -944,6 +944,18 @@ PARTS_CATALOG.tcmChara = [
   { id: 'tcm-chara-fly',   name: 'くしゅまる（とぶ）', trueColor: true, img: 'assets/tcm/chara_fly.webp',   w: 150, h: 140, lift: 0.5 },
   { id: 'tcm-chara-side',  name: 'くしゅまる（よこ）', trueColor: true, img: 'assets/tcm/chara_side.webp',  w: 100, h: 144 },
   { id: 'tcm-fairy',       name: 'ピンクの妖精',       trueColor: true, img: 'assets/tcm/fairy.webp',       w: 46,  h: 70, lift: 0.55 },
+  // LINEスタンプ（納品用StyleGuide 2026_10_13）より
+  { id: 'tcm-ks-hai', name: 'くしゅまる（はーい）', trueColor: true, img: 'assets/tcm/kushu/hai.webp', w: 150, h: 148 },
+  { id: 'tcm-ks-yorokobi', name: 'くしゅまる（にっこり）', trueColor: true, img: 'assets/tcm/kushu/yorokobi.webp', w: 150, h: 118 },
+  { id: 'tcm-ks-waai', name: 'くしゅまる（わーい）', trueColor: true, img: 'assets/tcm/kushu/waai.webp', w: 150, h: 130 },
+  { id: 'tcm-ks-guu', name: 'くしゅまる（グー）', trueColor: true, img: 'assets/tcm/kushu/guu.webp', w: 150, h: 127 },
+  { id: 'tcm-ks-love', name: 'くしゅまる（ハート）', trueColor: true, img: 'assets/tcm/kushu/love.webp', w: 150, h: 140 },
+  { id: 'tcm-ks-oishii', name: 'くしゅまる（もぐもぐ）', trueColor: true, img: 'assets/tcm/kushu/oishii.webp', w: 150, h: 148 },
+  { id: 'tcm-ks-peko', name: 'くしゅまる（おじぎ）', trueColor: true, img: 'assets/tcm/kushu/peko.webp', w: 150, h: 129 },
+  { id: 'tcm-ks-naki', name: 'くしゅまる（なみだ）', trueColor: true, img: 'assets/tcm/kushu/naki.webp', w: 150, h: 117 },
+  { id: 'tcm-ks-fairy-star', name: 'ピンクの妖精（ステッキ）', trueColor: true, img: 'assets/tcm/kushu/fairy_star.webp', w: 118, h: 150, lift: 0.5 },
+  { id: 'tcm-ks-fairy-puff', name: 'ピンクの妖精（ぷんぷん）', trueColor: true, img: 'assets/tcm/kushu/fairy_puff.webp', w: 150, h: 138 },
+  { id: 'tcm-ks-yuki', name: 'ピンクの妖精（雪）', trueColor: true, img: 'assets/tcm/kushu/yuki.webp', w: 150, h: 133, lift: 0.55 },
 ];
 // 会場の名物（写真から切り抜き）＋マーケットらしいパーツ
 PARTS_CATALOG.tcm = [
