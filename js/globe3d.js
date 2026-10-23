@@ -11,6 +11,10 @@ import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 const UNIT = 1 / 300;          // カタログの寸法（px）→ ワールド単位
 const PARTICLE_MAX = 24000;     // 確保する最大数
 const PARTICLE_DEFAULT = 14000; // 初期の量（振るとパーツが隠れるくらい）
+// 積雪：落ちた場所が盛り上がる高さマップ
+const SNOW_GRID = 56;            // 高さマップの細かさ
+const SNOW_TARGET_DEPTH = 0.06;  // 標準の量で積もったときの平均の深さ
+const SNOW_MAX_DEPTH = 0.13;     // 積もりすぎの上限
 
 // ───────── 形状 ─────────
 function pointInPoly(x, y, poly) {
@@ -99,6 +103,7 @@ function buildShape(key) {
     spec.backdropZ = -0.6;
     spec.baseW = 1.95; spec.baseD = 1.95;
     spec.capGeo = () => new THREE.PlaneGeometry(1.56, 1.56).rotateX(-Math.PI / 2);
+    spec.onFloor = (x, z) => Math.abs(x) <= 0.78 && Math.abs(z) <= 0.78;
   } else {
     // ハート / スター（押し出し）
     const shape = key === 'heart' ? heartShape() : starShape();
@@ -144,6 +149,8 @@ function buildShape(key) {
     spec.baseW = Math.max(0.9, sx1 - sx0 + 0.4);
     spec.baseH = (spec.seatY - Math.min(...poly.map((p) => p.y))) + 0.3;
     spec.baseD = depth + 0.35;
+    const capSpans = polyIntervalsAtY(shrink(0.97), spec.groundY);
+    spec.onFloor = (x, z) => Math.abs(z) <= depth * 0.46 && capSpans.some(([a, b]) => x >= a && x <= b);
     spec.capGeo = () => {
       const geos = polyIntervalsAtY(shrink(0.97), spec.groundY).map(([a, b]) => {
         const pg = new THREE.PlaneGeometry(b - a, depth * 0.92).rotateX(-Math.PI / 2);
@@ -156,6 +163,7 @@ function buildShape(key) {
 
   if (spec.base === 'round') {
     spec.seatR = spec.radiusAt(spec.seatY);
+    spec.onFloor = (x, z) => Math.hypot(x, z) <= spec.radiusAt(spec.groundY) * 0.985;
     spec.capGeo = () => {
       const r = spec.radiusAt(spec.groundY) * 0.985;
       const cg = new THREE.CircleGeometry(r, 72, 0, Math.PI * 2);
@@ -748,14 +756,8 @@ export class Globe {
     this.snowCap.receiveShadow = true;
     this.interior.add(this.snowCap);
 
-    // 積雪：床に積もった粒の量に応じて現れる白い層（逆さにすると消える）
-    const layer = cap.clone();
-    layer.translate(0, 0.006, 0);
-    this.snowLayer = new THREE.Mesh(layer, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85, emissive: 0x1a2440, emissiveIntensity: 0.12, transparent: true, opacity: 0, depthWrite: false }));
-    this.snowLayer.visible = false;
-    this.snowLayer.receiveShadow = true;
-    this.snowLayer.renderOrder = 1;
-    this.interior.add(this.snowLayer);
+    // 積雪：粒が落ちた場所が盛り上がる（高さマップ）
+    this._initSnowField();
     this._applyFloor();
 
     // 背景スクリーン
@@ -899,6 +901,235 @@ export class Globe {
       m.color.set(gt.color); m.metalness = gt.metalness; m.roughness = gt.roughness;
       m.emissiveIntensity = gt.metalness > 0.3 ? 0.04 : 0.12;
     }
+    // 粒の色も雪面に合わせる（金の雪に白い粒が積もると浮くため）
+    this._groundTint = new THREE.Color(gt.color);
+  }
+
+  // ───── 積雪（高さマップ） ─────
+  _initSnowField() {
+    const s = this.spec, G = SNOW_GRID;
+    this.snowG = G;
+    this.snowExt = s.halfW * 1.04;
+    this.snowStep = (2 * this.snowExt) / G;
+    this.snowH = new Float32Array(G * G);
+    this.snowMask = new Uint8Array(G * G);   // 積もれる範囲（床の上）
+    this.snowVert = new Uint8Array(G * G);   // メッシュを張る範囲（すそを含む）
+    let n = 0;
+    for (let j = 0; j < G; j++) {
+      for (let i = 0; i < G; i++) {
+        const x = this._snowPos(i), z = this._snowPos(j);
+        // 床の上は全部積もれる（ガラスぎわまで）
+        const ok = s.onFloor ? s.onFloor(x, z) : s.inside(x, s.groundY + 0.02, z);
+        this.snowMask[j * G + i] = ok ? 1 : 0;
+        if (ok) n++;
+      }
+    }
+    // 積もれる範囲の外側2周まで、高さ0の「すそ」を張って床となだらかにつなぐ
+    this.snowVert.set(this.snowMask);
+    for (let pass = 0; pass < 2; pass++) {
+      const prev = this.snowVert.slice();
+      for (let j = 0; j < G; j++) {
+        for (let i = 0; i < G; i++) {
+          if (prev[j * G + i]) continue;
+          let near = false;
+          for (let d = 0; d < 4 && !near; d++) {
+            const ni = i + (d === 0 ? 1 : d === 1 ? -1 : 0);
+            const nj = j + (d === 2 ? 1 : d === 3 ? -1 : 0);
+            if (ni >= 0 && nj >= 0 && ni < G && nj < G && prev[nj * G + ni]) near = true;
+          }
+          if (near) this.snowVert[j * G + i] = 1;
+        }
+      }
+    }
+    this.snowCells = Math.max(1, n);
+    // 粒1つが積もらせる高さ（標準の量で平均が SNOW_TARGET_DEPTH になるように）
+    this.snowUnit = (SNOW_TARGET_DEPTH * this.snowCells) / PARTICLE_DEFAULT;
+    this.snowDirty = true;
+    this._buildSnowSurface();
+  }
+
+  _snowPos(i) { return -this.snowExt + (i + 0.5) * this.snowStep; }
+
+  // 置いたパーツの根元に雪が寄り集まる（実物のスノードームらしさ）
+  _rebuildSnowBump() {
+    if (!this.snowH) return;
+    const G = this.snowG;
+    if (!this.snowBump) this.snowBump = new Float32Array(G * G);
+    this.snowBump.fill(0);
+    this.parts.forEach((p) => {
+      if (p.hang || p.lift > 0.02) return;          // 吊るす・浮かせるものは対象外
+      const w = Math.max(0.12, p.w * p.scale);
+      const r = Math.min(0.3, w * 0.5), peak = Math.min(0.05, w * 0.16);
+      const i0 = Math.max(0, ((p.x - r + this.snowExt) / this.snowStep) | 0);
+      const i1 = Math.min(G - 1, ((p.x + r + this.snowExt) / this.snowStep) | 0);
+      const j0 = Math.max(0, ((p.z - r + this.snowExt) / this.snowStep) | 0);
+      const j1 = Math.min(G - 1, ((p.z + r + this.snowExt) / this.snowStep) | 0);
+      for (let j = j0; j <= j1; j++) {
+        for (let i = i0; i <= i1; i++) {
+          const k = j * G + i;
+          if (!this.snowMask[k]) continue;
+          const d = Math.hypot(this._snowPos(i) - p.x, this._snowPos(j) - p.z) / r;
+          if (d >= 1) continue;
+          const h = peak * (1 - d) * (1 - d);       // 根元ほど高い
+          if (h > this.snowBump[k]) this.snowBump[k] = h;
+        }
+      }
+    });
+    this.snowDirty = true;
+  }
+
+  _snowIndex(x, z) {
+    if (!this.snowH) return -1;
+    const G = this.snowG;
+    const i = ((x + this.snowExt) / this.snowStep) | 0;
+    const j = ((z + this.snowExt) / this.snowStep) | 0;
+    if (i < 0 || j < 0 || i >= G || j >= G) return -1;
+    const k = j * G + i;
+    return this.snowMask[k] ? k : -1;
+  }
+
+  // 高さマップ＋寄せ雪（雪が積もっている所だけ盛り上がる）
+  _snowAt(k) {
+    const h = this.snowH[k];
+    const b = this.snowBump ? this.snowBump[k] : 0;
+    return h + (b > 0 ? b * Math.min(1, h / 0.025) : 0);
+  }
+
+  // その場所に積もっている雪の高さ
+  _snowTopAt(x, z) {
+    const k = this._snowIndex(x, z);
+    return k < 0 ? 0 : this._snowAt(k);
+  }
+
+  // 粒を1つ積もらせ、その粒がのる高さを返す
+  _depositSnow(x, z) {
+    const k = this._snowIndex(x, z);
+    if (k < 0) return 0;
+    const h = this._snowAt(k);
+    this.snowH[k] = Math.min(SNOW_MAX_DEPTH, this.snowH[k] + this.snowUnit);
+    this.snowDirty = true;
+    return h;
+  }
+
+  _clearSnowField() { if (this.snowH) { this.snowH.fill(0); this.snowDirty = true; } }
+
+  // 急な斜面は崩れて隣へ流れる（とがった山にならず、自然な裾野ができる）
+  _slumpSnow() {
+    const G = this.snowG, H = this.snowH, M = this.snowMask;
+    if (!H) return;
+    const maxStep = this.snowStep * 0.8;
+    for (let j = 0; j < G; j++) {
+      for (let i = 0; i < G; i++) {
+        const k = j * G + i;
+        if (!M[k] || H[k] <= 1e-6) continue;
+        for (let d = 0; d < 4; d++) {
+          const ni = i + (d === 0 ? 1 : d === 1 ? -1 : 0);
+          const nj = j + (d === 2 ? 1 : d === 3 ? -1 : 0);
+          const out = ni < 0 || nj < 0 || ni >= G || nj >= G || !M[nj * G + ni];
+          if (out) {
+            // 床のふち：積もりすぎた分はガラスとの隙間にこぼれ、裾がなだらかになる
+            const over = H[k] - maxStep * 0.3;
+            if (over > 0) { H[k] -= over * 0.3; this.snowDirty = true; }
+            continue;
+          }
+          const nk = nj * G + ni;
+          const over = H[k] - H[nk] - maxStep;
+          if (over > 0) { const m = over * 0.3; H[k] -= m; H[nk] += m; this.snowDirty = true; }
+        }
+      }
+    }
+  }
+
+  // 高さマップから雪面のメッシュを作る
+  _buildSnowSurface() {
+    if (this.snowLayer) { this.interior.remove(this.snowLayer); this.snowLayer.geometry.dispose(); this.snowLayer.material.dispose(); }
+    const G = this.snowG, M = this.snowVert, gy = this.spec.groundY;
+    const pos = [], col = [], idx = [];
+    const vid = new Int32Array(G * G).fill(-1);
+    for (let j = 0; j < G; j++) {
+      for (let i = 0; i < G; i++) {
+        const k = j * G + i;
+        if (!M[k]) continue;
+        vid[k] = pos.length / 3;
+        pos.push(this._snowPos(i), gy, this._snowPos(j));
+        col.push(1, 1, 1, 0);
+      }
+    }
+    for (let j = 0; j < G - 1; j++) {
+      for (let i = 0; i < G - 1; i++) {
+        const a = vid[j * G + i], b = vid[j * G + i + 1], c = vid[(j + 1) * G + i + 1], d = vid[(j + 1) * G + i];
+        if (a < 0 || b < 0 || c < 0 || d < 0) continue;
+        idx.push(a, d, c, a, c, b);
+      }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(col, 4));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    this.snowVid = vid;
+    const gt = GROUND_TYPES[this.groundKey || 'snow'] || GROUND_TYPES.snow;
+    this.snowLayer = new THREE.Mesh(g, new THREE.MeshStandardMaterial({
+      color: gt.color, metalness: gt.metalness, roughness: gt.roughness,
+      emissive: 0x1a2440, emissiveIntensity: gt.metalness > 0.3 ? 0.04 : 0.12,
+      vertexColors: true, transparent: true, depthWrite: false,
+    }));
+    this.snowLayer.receiveShadow = true;
+    this.snowLayer.renderOrder = 1;
+    this.snowLayer.visible = false;
+    this.interior.add(this.snowLayer);
+  }
+
+  // 高さマップを雪面の形に反映（隣とならして、なめらかな山にする）
+  _updateSnowSurface() {
+    if (!this.snowLayer || !this.snowDirty) return;
+    this.snowDirty = false;
+    const G = this.snowG, M = this.snowVert, vid = this.snowVid;
+    const geo = this.snowLayer.geometry;
+    const p = geo.attributes.position.array, c = geo.attributes.color.array, nr = geo.attributes.normal.array;
+    const gy = this.spec.groundY;
+    const S = this.snowSmooth || (this.snowSmooth = new Float32Array(G * G));
+    // 1) 隣とならした高さ
+    let any = false;
+    for (let j = 0; j < G; j++) {
+      for (let i = 0; i < G; i++) {
+        const k = j * G + i;
+        if (!M[k]) { S[k] = 0; continue; }
+        let h = this._snowAt(k) * 0.44, w = 0.44;
+        for (let d = 0; d < 4; d++) {
+          const ni = i + (d === 0 ? 1 : d === 1 ? -1 : 0);
+          const nj = j + (d === 2 ? 1 : d === 3 ? -1 : 0);
+          if (ni < 0 || nj < 0 || ni >= G || nj >= G) continue;
+          const nk = nj * G + ni;
+          if (!M[nk]) continue;
+          h += this._snowAt(nk) * 0.14; w += 0.14;
+        }
+        S[k] = h / w;
+        if (S[k] > 0.0008) any = true;
+      }
+    }
+    // 2) 高さ・傾き（法線）・透明度
+    const dy = 2 * this.snowStep;
+    for (let j = 0; j < G; j++) {
+      for (let i = 0; i < G; i++) {
+        const k = j * G + i, v = vid[k];
+        if (v < 0) continue;
+        const h = S[k];
+        p[v * 3 + 1] = gy + h;
+        const hl = i > 0 && M[k - 1] ? S[k - 1] : h;
+        const hr = i < G - 1 && M[k + 1] ? S[k + 1] : h;
+        const hd = j > 0 && M[k - G] ? S[k - G] : h;
+        const hu = j < G - 1 && M[k + G] ? S[k + G] : h;
+        let nx = hl - hr, ny = dy, nz = hd - hu;
+        const len = Math.hypot(nx, ny, nz) || 1;
+        nr[v * 3] = nx / len; nr[v * 3 + 1] = ny / len; nr[v * 3 + 2] = nz / len;
+        c[v * 4 + 3] = Math.min(1, Math.sqrt(h / 0.04));   // 薄いところは床が透けて、ふちがなだらかに消える
+      }
+    }
+    geo.attributes.position.needsUpdate = true;
+    geo.attributes.color.needsUpdate = true;
+    geo.attributes.normal.needsUpdate = true;
+    this.snowLayer.visible = any;
   }
 
   setEngraving({ name = '', message = '' } = {}) {
@@ -1024,6 +1255,7 @@ export class Globe {
     if (p.string) { this.partGroup.remove(p.string); p.string.geometry.dispose(); p.string.material.dispose(); }
     p.mesh.geometry.dispose(); p.mesh.material.map.dispose(); p.mesh.material.dispose();
     this.parts.delete(id);
+    this.bumpDirty = true;
     if (this.selectedId === id) this.select(null);
   }
 
@@ -1088,6 +1320,7 @@ export class Globe {
     const W = p.w * p.scale, H = p.h * p.scale;
     p.mesh.scale.set(p.flip ? -W : W, H, 1);
     p.mesh.position.set(p.x, spec.groundY + 0.02 + p.lift, p.z);
+    this.bumpDirty = true;
   }
 
   _updateSelRing() {
@@ -1247,7 +1480,6 @@ export class Globe {
     this.pSpread = new Uint8Array(N);
     this.spreadT = 99;
     this.spriteCache = {};
-    this.layerOpacity = 0;
     this.pMat = new THREE.ShaderMaterial({
       uniforms: { map: { value: null }, scale: { value: 1 }, uTime: { value: 0 } },
       vertexShader: `
@@ -1370,21 +1602,38 @@ export class Globe {
   // 始まりの状態：大半は床に薄く積もった雪（積雪の層として見せる）、残りがふんわり舞っている
   _resetParticles(floating = 0.28) {
     if (!this.points || !this.spec) return;
+    if (!this.snowH) this._initSnowField();
+    this._clearSnowField();
     const pos = this.points.geometry.attributes.position;
     const s = this.spec, gy = s.groundY;
     let settled = 0;
     for (let i = 0; i < PARTICLE_MAX; i++) {
-      this.pRest[i] = gy + 0.012 + Math.random() * 0.02;
+      this.pRest[i] = 0.004 + Math.random() * 0.011;   // 粒の厚み（雪面からの浮き）
       this.pSpread[i] = 0;
       this.pv[i * 3] = this.pv[i * 3 + 2] = 0; this.pv[i * 3 + 1] = -0.02;
       const [x, y, z] = this._randomInSlice(gy + 0.05, s.topY - 0.04);
-      if (Math.random() > floating && s.inside(x, gy + 0.06, z)) {
-        pos.setXYZ(i, x, this.pRest[i], z); this.pSettled[i] = 1; if (i < this.pCount) settled++;
+      const rise = (this.preset || {}).fall < 0;
+      if (!rise && i < this.pCount && Math.random() > floating && s.inside(x, gy + 0.06, z)) {
+        pos.setXYZ(i, x, gy + this._depositSnow(x, z) + this.pRest[i], z);
+        this.pSettled[i] = 1; settled++;
       } else { pos.setXYZ(i, x, y, z); this.pSettled[i] = 0; }
     }
     pos.needsUpdate = true;
-    const P = this.preset || {};
-    this.layerOpacity = P.fall < 0 ? 0 : Math.min(1, settled / (this.pCount * 0.45)) * (P.group === 'snow' || !P.group ? 0.95 : 0.5);
+    // 初期の山をならしておく
+    for (let n = 0; n < 12; n++) this._slumpSnow();
+    this._settleInitialFlakes();
+  }
+
+  // ならしたあとの雪面に、積もっている粒を座らせ直す
+  _settleInitialFlakes() {
+    const pos = this.points.geometry.attributes.position;
+    const gy = this.spec.groundY;
+    for (let i = 0; i < this.pCount; i++) {
+      if (this.pSettled[i] !== 1) continue;
+      const o = i * 3;
+      pos.array[o + 1] = gy + this._snowTopAt(pos.array[o], pos.array[o + 2]) + this.pRest[i];
+    }
+    pos.needsUpdate = true;
   }
 
   _gravityLocal() {
@@ -1396,6 +1645,7 @@ export class Globe {
     this.spreadT = 0;
     const s = this.spec;
     if (!s) return;
+    this._clearSnowField();
     this.root.updateMatrixWorld();
     const upright = this._gravityLocal().y < -0.85;
     const pos = this.points.geometry.attributes.position.array;
@@ -1490,9 +1740,16 @@ export class Globe {
           this.pv[o] *= -0.3; this.pv[o + 1] *= -0.3; this.pv[o + 2] *= -0.3;
           x *= 0.985; z *= 0.985; y = (y - cy) * 0.985 + cy;
         }
-        if (!rise && g.y < 0 && y <= this.pRest[i]) {
-          y = this.pRest[i];
-          if (upright && s.inside(x, s.groundY + 0.06, z)) this.pSettled[i] = 1;
+        if (!rise && g.y < 0) {
+          // 雪面（すでに積もった高さ）の上に着地する
+          const top = s.groundY + this._snowTopAt(x, z) + this.pRest[i];
+          if (y <= top) {
+            y = top;
+            if (upright && s.inside(x, s.groundY + 0.06, z)) {
+              y = s.groundY + this._depositSnow(x, z) + this.pRest[i];
+              this.pSettled[i] = 1;
+            }
+          }
         }
         if (rise && y > s.topY - 0.15) {
           const [rx, , rz] = this._randomInside(s.groundY);
@@ -1505,14 +1762,13 @@ export class Globe {
     }
     pos.needsUpdate = true;
     alpha.needsUpdate = true;
-    // 床に積もった粒の量に応じて、積雪の層がうっすら現れる（逆さにすると消える）
-    if (this.snowLayer) {
-      const max = P.group === 'snow' || !P.group ? 0.95 : 0.5;
-      const target = rise || !upright ? 0 : Math.min(1, onGround / (this.pCount * 0.45)) * max;
-      this.layerOpacity += (target - this.layerOpacity) * Math.min(1, dt * (target < this.layerOpacity ? 6 : 0.8));
-      this.snowLayer.material.opacity = this.layerOpacity;
-      this.snowLayer.visible = this.layerOpacity > 0.01;
+    // 傾けている間は積もった雪が滑り落ちる
+    if (!upright && this.snowH) {
+      const k2 = Math.pow(0.9, dt * 60);
+      for (let n = 0; n < this.snowH.length; n++) this.snowH[n] *= k2;
+      this.snowDirty = true;
     }
+    this.onGround = onGround;
   }
 
   // 指を離したとき：勢い（フリック）も加味して、近い方（正立／逆さ）へ落ち着かせる
@@ -1538,6 +1794,7 @@ export class Globe {
     this.flipTo = to;
     this.flipDur = 1.1;
     this.flipT = 0;
+    this._clearSnowField();
     // 積もっていた雪をはがして、新しい重力で落ち直させる
     for (let i = 0; i < this.pCount; i++) {
       this.pSettled[i] = 0; this.pSpread[i] = 0;
@@ -1580,6 +1837,9 @@ export class Globe {
     this.root.updateMatrixWorld();
     this.clipWorld.copy(this.clipLocal).applyMatrix4(this.root.matrixWorld);
     this._updateParticles(dt, t);
+    if (this.bumpDirty) { this.bumpDirty = false; this._rebuildSnowBump(); }
+    this._slumpSnow();
+    if ((this._snowTick = (this._snowTick || 0) + 1) % 3 === 0) this._updateSnowSurface();
     const round = this.spec.base === 'round';
     if (this.musicBox && !this.dragging) {
       this.mbT = (this.mbT || 0) + dt;
