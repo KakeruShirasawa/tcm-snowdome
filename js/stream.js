@@ -50,7 +50,7 @@ const STREAM_SAMPLES = [
       });
     }
     // 1枚あたり約4.5秒で流れる速さ
-    track.style.setProperty('--stream-duration', (items.length * 4.5) + 's');
+    track.style.setProperty('--stream-duration', (items.length * 6) + 's');
     sec.classList.add('ready');
   }
 
