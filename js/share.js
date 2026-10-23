@@ -51,6 +51,13 @@ async function submitContest() {
   const dataUrl = document.getElementById('contestPreview').dataset.dataUrl;
 
   if (!name) { showToast('ニックネームを入力してください'); return; }
+  for (const [label, text] of [['ニックネーム', name], ['コメント', comment]]) {
+    const r = NGWords.check(text);
+    if (!r.ok) { showToast(`${label}：${r.reason}`); return; }
+  }
+  if (typeof window.engravingIsClean === 'function' && !window.engravingIsClean()) {
+    showToast('台座の刻印に使えない言葉が含まれています'); return;
+  }
   if (!consent) { showToast('規約への同意が必要です'); return; }
   if (!dataUrl) { showToast('画像の生成に失敗しています'); return; }
 

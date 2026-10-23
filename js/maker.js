@@ -16,7 +16,7 @@ const State = {
 
 // パーツのカテゴリ（画像が入っているものだけ表示）
 const PART_CATEGORIES = [
-  ['tcmChara', '★くしゅまる'], ['tcm', '★TCMマーケット'], ['tcmMug', '★マグのなかま'], ['apaman', 'べあ～君＆ハニちゃん'], ['characters', 'キャラ'], ['porcelain', '磁器コレクション'], ['animals', 'どうぶつ'], ['people', 'ひと'], ['objects', 'オブジェ'],
+  ['tcmChara', '★くしゅまる'], ['tcm', '★TCMマーケット'], ['tcmMug', '★マグ（緑）'], ['tcmMugRed', '★マグ（赤）'], ['tcmMugNavy', '★マグ（紺）'], ['apaman', 'べあ～君＆ハニちゃん'], ['characters', 'キャラ'], ['porcelain', '磁器コレクション'], ['animals', 'どうぶつ'], ['people', 'ひと'], ['objects', 'オブジェ'],
   ['buildings', '街と乗り物'], ['nature', '木と自然'], ['food', '食べもの'], ['toys', '雑貨・おもちゃ'], ['decorations', 'デコ'],
 ];
 
@@ -288,11 +288,28 @@ function initFinishing() {
   swatchRow('outsideSelector', Object.entries(OUTSIDES), State.outside, (t) => outsideCss[Object.keys(OUTSIDES).find((k) => OUTSIDES[k] === t)],
     (k) => { State.outside = k; globe.setOutside(k); });
 
-  // 刻印
+  // 刻印（公式サイトに出る文字なので、入れられない言葉はここで止める）
   const nm = document.getElementById('engName'), msg = document.getElementById('engMsg');
+  const ngNote = document.getElementById('engNgNote');
   let timer;
-  const apply = () => { clearTimeout(timer); timer = setTimeout(() => globe.setEngraving({ name: nm.value, message: msg.value }), 250); };
+  const apply = () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      const bad = [nm, msg].map((el) => [el, NGWords.check(el.value)]).find(([, r]) => !r.ok);
+      [nm, msg].forEach((el) => el.classList.remove('is-ng'));
+      if (bad) {
+        bad[0].classList.add('is-ng');
+        ngNote.textContent = bad[1].reason;
+        ngNote.hidden = false;
+        return;                       // 刻印は前のままにして、台座には反映しない
+      }
+      ngNote.hidden = true;
+      globe.setEngraving({ name: nm.value, message: msg.value });
+    }, 250);
+  };
   nm.addEventListener('input', apply); msg.addEventListener('input', apply);
+  // 書き出し・投稿の直前にも見る（貼り付けなどで素通りしないように）
+  window.engravingIsClean = () => NGWords.check(nm.value).ok && NGWords.check(msg.value).ok;
 
   // オルゴール
   const mb = document.getElementById('musicBoxBtn');

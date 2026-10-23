@@ -65,6 +65,7 @@ function _submitPost(p) {
   const dataUrl = String(p.image || '');
 
   if (!name) return _json({ ok: false, error: 'ニックネームを入力してください' });
+  if (_hasNg(name) || _hasNg(comment)) return _json({ ok: false, error: '使えない言葉が含まれています' });
 
   const m = dataUrl.match(/^data:(image\/(?:png|jpeg));base64,([A-Za-z0-9+/=]+)$/);
   if (!m) return _json({ ok: false, error: '画像形式が不正です' });
@@ -273,4 +274,22 @@ function hideTestPosts() {
 /** 最新5件をログ出力 */
 function debug_listRecent() {
   console.log(_getSheet(CONFIG.SHEET_NAME).getDataRange().getValues().slice(-5));
+}
+
+// ───────── 入力文字のチェック（画面側 js/ng-words.js の控え） ─────────
+// 画面側は迂回できるので、サーバーでももう一度見る。
+var NG_RE = /(しね|死ね|ころす|殺す|殺害|自殺|くたばれ|消えろ|ばか|馬鹿|baka|あほ|阿呆|ぶす|不細工|でぶ|きもい|うざい|きちがい|気違い|基地外|池沼|どじん|土人|ちょん|ざいにち|ぶらく|部落|乞食|めくら|つんぼ|ちんこ|ちんぽ|まんこ|せっくす|性交|猥褻|わいせつ|強姦|ごうかん|れいぷ|痴漢|ちかん|売春|援助交際|ろりこん|えろ|hentai|fuck|fuk|shit|bitch|bastard|asshole|cunt|dick|pussy|penis|vagina|porn|sex|rape|rapist|pedo|whore|slut|nigger|nigga|faggot|retard|idiot|stupid|kys|覚醒剤|大麻|麻薬|爆弾|拳銃|テロ|てろ)/;
+var NG_PAT = [/https?:\/\//i, /www\./i, /[a-z0-9._-]+@[a-z0-9.-]+\.[a-z]{2,}/i, /[a-z0-9-]+\.(com|net|org|jp|io|me|xyz|shop|info|biz)\b/i, /0\d{1,4}[-ー\s]?\d{1,4}[-ー\s]?\d{3,4}/];
+
+function _hasNg(src) {
+  var raw = String(src || '');
+  if (!raw) return false;
+  for (var i = 0; i < NG_PAT.length; i++) if (NG_PAT[i].test(raw)) return true;
+  var s = raw.normalize ? raw.normalize('NFKC') : raw;
+  s = s.toLowerCase();
+  s = s.replace(/[\u30a1-\u30f6]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0x60); });
+  s = s.replace(/[^0-9a-z\u3040-\u309f\u4e00-\u9fff]/g, '');
+  s = s.replace(/(.)\1{2,}/g, '$1$1');
+  s = s.split('ばかんす').join('').split('しねま').join('').split('ちんすこう').join('').split('class').join('').split('pass').join('');
+  return NG_RE.test(s);
 }

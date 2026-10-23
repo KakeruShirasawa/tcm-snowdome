@@ -980,6 +980,13 @@ PARTS_CATALOG.tcmMug = [
   MUG('dwarf1', '小人1', 60, 91), MUG('dwarf2', '小人2', 66, 90), MUG('dwarf3', '小人3', 66, 90), MUG('dwarf4', '小人4', 66, 90),
   MUG('dwarf5', '小人5', 60, 90), MUG('dwarf6', '小人6', 60, 90), MUG('dwarf7', '小人7', 66, 90),
 ];
+// マグのなかまの色違い（2026マグの赤・紺に合わせて塗り替えたもの）
+const mugVariant = (suffix, label, dir) =>
+  PARTS_CATALOG.tcmMug
+    .filter((p) => p.id !== 'mug-slipper')   // ガラスのくつは白一色なので色違いなし
+    .map((p) => ({ ...p, id: `${p.id}-${suffix}`, name: `${p.name}（${label}）`, img: p.img.replace('/mug/', `/${dir}/`) }));
+PARTS_CATALOG.tcmMugRed  = mugVariant('red',  '赤', 'mug_red');
+PARTS_CATALOG.tcmMugNavy = mugVariant('navy', '紺', 'mug_navy');
 // アパマンショップ公式キャラクター（公式のぬいぐるみ写真で統一）
 PARTS_CATALOG.apaman = [
   { id: 'apa-bear', name: 'べあ～君',   trueColor: true, img: 'assets/apaman/bear.webp', w: 112, h: 148 },
