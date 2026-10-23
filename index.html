@@ -4,17 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>スノードームメーカー｜東京クリスマスマーケット2026</title>
-<meta name="description" content="パーツや雪、台座を選んで、あなただけのスノードームを作ろう。完成した作品はSNSでシェアしたり、コンテストに投稿したりできます。">
+<meta name="description" content="パーツや雪、台座を選んで、あなただけのスノードームを作ろう。完成した作品はSNSでシェアしたり、みんなのギャラリーに追加したりできます。">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="東京クリスマスマーケット2026">
 <meta property="og:title" content="スノードームメーカー｜東京クリスマスマーケット2026">
-<meta property="og:description" content="パーツや雪、台座を選んで、あなただけのスノードームを作ろう。完成した作品はSNSでシェアしたり、コンテストに投稿したりできます。">
+<meta property="og:description" content="パーツや雪、台座を選んで、あなただけのスノードームを作ろう。完成した作品はSNSでシェアしたり、みんなのギャラリーに追加したりできます。">
 <meta property="og:url" content="https://kakerushirasawa.github.io/tcm-snowdome/">
 <meta property="og:image" content="https://kakerushirasawa.github.io/tcm-snowdome/assets/ogp.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="description" content="あなただけのオリジナルスノードームを作って、SNSやコンテストでシェアしよう。東京クリスマスマーケット公式。">
+<meta name="description" content="あなただけのオリジナルスノードームを作って、SNSやギャラリーでシェアしよう。東京クリスマスマーケット公式。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230d1b3e'/%3E%3Ccircle cx='16' cy='14' r='8.5' fill='none' stroke='%23c9a66b' stroke-width='1.6'/%3E%3Cpath d='M7 24h18l-1.6 4H8.6z' fill='%23c9a66b'/%3E%3Ccircle cx='12' cy='12' r='1.1' fill='%23fff'/%3E%3Ccircle cx='19' cy='10' r='1' fill='%23fff'/%3E%3Ccircle cx='17' cy='16' r='1.2' fill='%23fff'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=Playfair+Display:ital,wght@0,400;0,500;1,400;1,500&display=swap" rel="stylesheet">
@@ -40,6 +41,17 @@
   <h1><span class="nw">世界にひとつの、</span><span class="nw"><span class="accent">スノードーム</span>を。</span></h1>
   <p class="subtitle">S  N  O  W  G  L  O  B  E   M  A  K  E  R</p>
 </div>
+
+<section class="globe-stream" id="globeStream" aria-label="みんなのスノードーム">
+  <div class="stream-head">
+    <span class="jp">みんなのスノードーム</span>
+    <span class="en">Galerie</span>
+    <a class="stream-more" href="gallery.html">すべて見る →</a>
+  </div>
+  <div class="stream-view">
+    <div class="stream-track" id="streamTrack"></div>
+  </div>
+</section>
 
 <main class="maker-wrap">
   <div class="maker-layout">
@@ -183,9 +195,9 @@
         </div>
         <div class="action-stack">
           <button class="btn btn-primary" id="btnPostContest">
-            <span class="label-en">Contest</span>
+            <span class="label-en">Galerie</span>
             <span class="divider"></span>
-            <span>コンテストに投稿</span>
+            <span>ギャラリーに追加</span>
           </button>
           <button class="btn" id="btnDownload">⬇ 画像をダウンロード</button>
           <button class="btn" id="btnShareX">𝕏 でシェア</button>
@@ -198,11 +210,11 @@
   </div>
 </main>
 
-<!-- コンテスト投稿モーダル -->
+<!-- ギャラリー追加モーダル -->
 <div class="modal-overlay" id="contestModal">
   <div class="modal">
     <button class="modal-close" onclick="closeContestModal()">×</button>
-    <h2>コンテストに投稿</h2>
+    <h2>ギャラリーに追加</h2>
     <p class="modal-sub">Deine Schneekugel teilen</p>
     <img id="contestPreview" style="width: 100%; border-radius: var(--radius-sm); margin-bottom: 16px; background:#06102e;" alt="プレビュー">
     <div class="form-group">
@@ -216,26 +228,23 @@
     <div class="form-group" style="font-size: 11px;">
       <label style="display: flex; gap: 8px; align-items: flex-start; cursor: pointer; letter-spacing: 0;">
         <input type="checkbox" id="contestConsent" style="width: auto; margin-top: 3px;">
-        <span>投稿作品を東京クリスマスマーケット公式のSNS・サイトで紹介することに同意します。公序良俗に反する作品は非掲載となります。</span>
+        <span>作品を東京クリスマスマーケット公式のSNS・サイトで紹介することに同意します。公序良俗に反する作品は非掲載となります。</span>
       </label>
     </div>
     <div style="display: flex; gap: 10px; margin-top: 20px;">
       <button class="btn btn-ghost" onclick="closeContestModal()" style="flex: 1; background: var(--bg-panel-sub); color: var(--text-dark); border-color: var(--border-dark);">キャンセル</button>
-      <button class="btn btn-primary" id="btnSubmitContest" onclick="submitContest()" style="flex: 2;">投稿する</button>
+      <button class="btn btn-primary" id="btnSubmitContest" onclick="submitContest()" style="flex: 2;">ギャラリーに追加</button>
     </div>
-    <p style="font-size: 10px; color: var(--text-dark-dim); margin-top: 14px; text-align: center; font-family: var(--font-serif-en); font-style: italic;">
-      Contest Period: <span id="contestPeriodLabel"></span>
-    </p>
   </div>
 </div>
 
-<!-- 投稿完了モーダル -->
+<!-- 追加できたときのモーダル -->
 <div class="modal-overlay" id="postSuccessModal">
   <div class="modal" style="text-align: center;">
     <button class="modal-close" onclick="closePostSuccess()">×</button>
     <div style="font-size: 48px; color: var(--tcm-gold);">❄</div>
     <h2 style="margin-top: 8px;">Vielen Dank!</h2>
-    <p class="modal-sub">投稿ありがとう</p>
+    <p class="modal-sub">ギャラリーに追加しました</p>
     <p style="color: var(--text-dark);">作品は事務局で確認したあと、ギャラリーに掲載されます。<br>掲載されたらSNSでシェアして、たくさんの「いいね」をもらおう！</p>
     <p style="margin-top: 16px; font-size: 12px; color: var(--text-dark-dim);">
       あなたの作品URL：<br>
@@ -262,6 +271,7 @@
 <script src="js/particle-effect.js"></script>
 <script src="js/export.js"></script>
 <script src="js/share.js"></script>
+<script src="js/stream.js"></script>
 <script type="importmap">
 { "imports": {
   "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
@@ -270,7 +280,6 @@
 </script>
 <script type="module" src="js/maker.js"></script>
 <script>
-  document.getElementById('contestPeriodLabel').textContent = CONFIG.CONTEST_PERIOD;
 </script>
 
 </body>

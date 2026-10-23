@@ -11,8 +11,8 @@ const CONFIG = {
   // ギャラリーで一度に取得する件数
   GALLERY_PAGE_SIZE: 24,
 
-  // コンテスト期間（表示用）
-  CONTEST_PERIOD: '日程調整中（公開前に設定）',
+  // スタート画面に流す作品数（足りない分は見本で埋めます）
+  STREAM_COUNT: 10,
 
   // ハッシュタグ
   HASHTAGS: ['東京クリスマスマーケット', 'TCMスノードーム', 'TokyoChristmasMarket'],

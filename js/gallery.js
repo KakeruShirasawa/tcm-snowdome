@@ -1,5 +1,5 @@
 // ============================================================
-// コンテストギャラリー
+// みんなのスノードーム（ギャラリー）
 // ============================================================
 
 const Gallery = {
@@ -91,7 +91,7 @@ function _renderBatch(items) {
   if (grid.children.length === 0 && items.length === 0) {
     grid.innerHTML = `<div class="gallery-empty" style="grid-column: 1 / -1;">
       <p style="font-size: 48px; margin: 0;">❄</p>
-      <p>まだ投稿がありません。<br>最初の作品を投稿してみよう！</p>
+      <p>まだ作品がありません。<br>最初のスノードームを作ってみよう！</p>
       <a href="index.html" class="btn btn-primary" style="margin-top: 16px;">スノードームを作る</a>
     </div>`;
     return;

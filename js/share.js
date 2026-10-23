@@ -1,5 +1,5 @@
 // ============================================================
-// SNS共有・コンテスト投稿
+// SNS共有・ギャラリーへの追加
 // ============================================================
 
 function shareToX() {
@@ -27,7 +27,7 @@ function _snowdomeClientId() {
   } catch (e) { return ''; }
 }
 
-// ───────── コンテスト投稿モーダル ─────────
+// ───────── ギャラリー追加モーダル ─────────
 function openContestModal() {
   document.getElementById('contestModal').classList.add('open');
   // プレビュー用に書き出し
@@ -68,7 +68,7 @@ async function submitContest() {
     body.append('ua', navigator.userAgent);
     body.append('client', _snowdomeClientId());
 
-    if (!CONFIG.GAS_WEBAPP_URL || CONFIG.GAS_WEBAPP_URL.includes('REPLACE_WITH')) { throw new Error('コンテスト投稿は準備中です'); }
+    if (!CONFIG.GAS_WEBAPP_URL || CONFIG.GAS_WEBAPP_URL.includes('REPLACE_WITH')) { throw new Error('ギャラリーへの追加は準備中です'); }
     const res = await fetch(CONFIG.GAS_WEBAPP_URL, { method: 'POST', body });
     const result = await res.json();
 
@@ -78,14 +78,14 @@ async function submitContest() {
       document.getElementById('postShareUrl').textContent = result.shareUrl || CONFIG.SITE_URL;
       document.getElementById('postShareUrl').href = result.shareUrl || CONFIG.SITE_URL;
     } else {
-      showToast('投稿に失敗しました: ' + (result.error || ''));
+      showToast('追加できませんでした: ' + (result.error || ''));
     }
   } catch (err) {
     console.error(err);
-    showToast('投稿エラー。ネットワークを確認してください');
+    showToast('追加できませんでした。ネットワークを確認してください');
   } finally {
     btn.disabled = false;
-    btn.textContent = 'コンテストに投稿する';
+    btn.textContent = 'ギャラリーに追加';
   }
 }
 
@@ -93,11 +93,11 @@ function closePostSuccess() {
   document.getElementById('postSuccessModal').classList.remove('open');
 }
 
-// 投稿成功後、Xに共有
+// 追加できたあと、Xに共有
 function sharePostToX() {
   const url = document.getElementById('postShareUrl').href;
   const tags = CONFIG.HASHTAGS.join(' #');
-  const text = `東京クリスマスマーケット スノードームコンテストに投稿しました❄️\n#${tags}`;
+  const text = `東京クリスマスマーケットのスノードームを作りました❄️\n#${tags}`;
   const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
   window.open(shareUrl, '_blank', 'noopener,noreferrer');
 }
