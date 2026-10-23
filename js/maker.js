@@ -47,26 +47,9 @@ function init() {
   if (State.background === 'none') globe.setBackground({ none: true });
   else setBackground(PARTS_CATALOG.backgrounds.find((b) => b.id === State.background));
   document.body.classList.add('globe-ready');
-  placeDefaultScene();
 }
 
-// 最初に開いたときの中身：TCMのピラミッドと、くしゅまる
-async function placeDefaultScene() {
-  try {
-    const P = PARTS_CATALOG;
-    const put = async (cat, x, z, scale = 1) => {
-      if (!cat) return;
-      const id = await globe.addPart(cat);
-      const p = globe.parts.get(id);
-      p.x = x; p.z = z; p.scale = scale;
-      globe.updatePart(id, {});
-    };
-    await put(P.tcm.find((c) => c.id === 'tcm-pyramid'), -0.14, -0.3, 1.0);
-    await put(P.tcmChara.find((c) => c.id === 'tcm-chara-wave'), 0.34, 0.2, 0.95);
-    await put(P.tcm.find((c) => c.id === 'tcm-star'), 0.36, -0.2, 0.9);
-    globe.select(null);
-  } catch (e) { console.warn(e); }
-}
+// 最初はからっぽ。パーツはすべてお客さんに選んでもらう
 
 // ───────── 選択肢パネル ─────────
 function optionList(wrapId, entries, current, render, onPick) {
