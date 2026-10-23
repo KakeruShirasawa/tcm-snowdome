@@ -92,8 +92,11 @@ function _renderBatch(items) {
     grid.innerHTML = `<div class="gallery-empty" style="grid-column: 1 / -1;">
       <p style="font-size: 48px; margin: 0;">❄</p>
       <p>まだ作品がありません。<br>最初のスノードームを作ってみよう！</p>
-      <a href="index.html" class="btn btn-primary" style="margin-top: 16px;">スノードームを作る</a>
+      <a href="maker.html" class="btn btn-primary" style="margin-top: 16px;">スノードームを作る</a>
     </div>`;
+    // 0件のときは下部のSTARTボタンが二重になるので隠す
+    const cta = document.querySelector('.cta-make');
+    if (cta) cta.style.display = 'none';
     return;
   }
 

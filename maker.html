@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>スノードームメーカー｜東京クリスマスマーケット2026</title>
+<meta name="description" content="パーツや雪、台座を選んで、あなただけのスノードームを作ろう。完成した作品はSNSでシェアしたり、みんなのギャラリーに追加したりできます。">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="東京クリスマスマーケット2026">
+<meta property="og:title" content="スノードームメーカー｜東京クリスマスマーケット2026">
+<meta property="og:description" content="パーツや雪、台座を選んで、あなただけのスノードームを作ろう。完成した作品はSNSでシェアしたり、みんなのギャラリーに追加したりできます。">
+<meta property="og:url" content="https://kakerushirasawa.github.io/tcm-snowdome/maker.html">
+<meta property="og:image" content="https://kakerushirasawa.github.io/tcm-snowdome/assets/ogp.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="description" content="あなただけのオリジナルスノードームを作って、SNSやギャラリーでシェアしよう。東京クリスマスマーケット公式。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230d1b3e'/%3E%3Ccircle cx='16' cy='14' r='8.5' fill='none' stroke='%23c9a66b' stroke-width='1.6'/%3E%3Cpath d='M7 24h18l-1.6 4H8.6z' fill='%23c9a66b'/%3E%3Ccircle cx='12' cy='12' r='1.1' fill='%23fff'/%3E%3Ccircle cx='19' cy='10' r='1' fill='%23fff'/%3E%3Ccircle cx='17' cy='16' r='1.2' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;500;700&family=Playfair+Display:ital,wght@0,400;0,500;1,400;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/common.css">
+<link rel="stylesheet" href="css/maker.css">
+</head>
+<body>
+
+<div class="sky-bg"></div>
+
+<header class="site-header">
+  <p class="brand">Tokyo Christmas Market 2026</p>
+  <nav class="nav">
+    <a href="index.html"><span class="roman">I</span>TOP</a>
+    <a href="maker.html" class="active"><span class="roman">II</span>つくる</a>
+    <a href="gallery.html"><span class="roman">III</span>ギャラリー</a>
+  </nav>
+</header>
+
+<div class="arch-decoration"></div>
+
+<div class="title-block compact">
+  <p class="tagline">Schneekugel bauen</p>
+  <h1><span class="nw"><span class="accent">スノードーム</span>をつくる</span></h1>
+</div>
+
+
+<main class="maker-wrap">
+  <div class="maker-layout">
+
+    <!-- 左：ステージ -->
+    <section class="stage-wrap">
+      <div class="stage" id="stage">
+        <canvas id="globeCanvas" aria-label="スノードームのプレビュー"></canvas>
+        <div class="stage-topbar">
+          <span>Glas &amp; Sockel</span>
+          <span class="hint">左右にスワイプで逆さま ・ ダブルタップでもOK ・ パーツは掴んで移動</span>
+        </div>
+        <div class="flip-hint" id="flipHint" aria-hidden="true"><span class="fh-hand">☝</span><span class="fh-text">左右にスワイプで<b>逆さま</b>に</span></div>
+        <div class="stage-loading" id="stageLoading">Die Schneekugel wird vorbereitet…</div>
+
+        <!-- 選択中パーツの操作バー -->
+        <div class="part-toolbar" id="partToolbar">
+          <div class="pt-head"><span class="pt-name" id="ptName"></span><button type="button" class="pt-close" id="ptClose" aria-label="選択を解除">×</button></div>
+          <div class="pt-row">
+            <div class="pt-group"><span class="pt-label">大きさ</span><button type="button" data-act="smaller" aria-label="小さく">−</button><button type="button" data-act="bigger" aria-label="大きく">＋</button></div>
+            <div class="pt-group"><span class="pt-label">高さ</span><button type="button" data-act="down" aria-label="下げる">▾</button><button type="button" data-act="up" aria-label="上げる">▴</button></div>
+            <div class="pt-group"><span class="pt-label">反転</span><button type="button" data-act="flip" aria-label="左右反転">⇋</button></div>
+            <div class="pt-group"><span class="pt-label">&nbsp;</span><button type="button" data-act="delete" class="danger" aria-label="削除">削除</button></div>
+          </div>
+          <div class="pt-colors" id="ptColors"></div>
+        </div>
+      </div>
+
+      <div class="stage-controls">
+        <button class="shake-btn" id="shakeBtn">❄ Shake  振る</button>
+        <button class="btn btn-ghost btn-sm" id="btnReset">リセット</button>
+      </div>
+    </section>
+
+    <!-- 右：アトリエパネル -->
+    <aside class="atelier-panel">
+
+      <!-- ステップタブ -->
+      <div class="step-tabs" role="tablist">
+        <button class="step-tab active" data-step="figures" role="tab"><span class="roman">I</span>中身</button>
+        <button class="step-tab" data-step="scene" role="tab"><span class="roman">II</span>景色</button>
+        <button class="step-tab" data-step="globe" role="tab"><span class="roman">III</span>器</button>
+        <button class="step-tab" data-step="gravur" role="tab"><span class="roman">IV</span>刻印</button>
+      </div>
+
+      <!-- I 中身 -->
+      <section class="step-pane active" data-pane="figures">
+        <div class="block">
+          <div class="section-label"><span class="jp">パーツを置く</span><span class="en">Figuren</span></div>
+          <div class="cat-chips parts-tabs" id="partCats"></div>
+          <div class="parts-category" id="partsGrid"></div>
+        </div>
+        <div class="hint-box">
+          <strong>Tipp</strong>
+          タップでドームに置く・掴んで雪の上を移動。置いたパーツをタップすると、大きさ／高さ／反転の操作バーが出ます。<br>
+          星やオーナメントは天井から吊るされ、「高さ」でひもの長さを変えられます。<br>
+          <em style="color: var(--tcm-gold-dark);">ドームを左右にスワイプすると傾きます。半分以上傾けるか、勢いよくはじくと逆さまに。ダブルタップでも逆さま⇄元に戻せます。</em><br>
+          逆さまの間に中身を変えると、自動で元の向きに戻ります／視点を変えるのは右ドラッグ・2本指
+        </div>
+      </section>
+
+      <!-- II 景色 -->
+      <section class="step-pane" data-pane="scene">
+        <div class="block">
+          <div class="section-label"><span class="jp">背景</span><span class="en">Hintergrund</span></div>
+          <div class="bg-presets" id="bgPresets"></div>
+          <label class="upload-area" for="bgUploadInput">
+            <span class="icon">⤴</span>
+            <span class="text">自分の写真を使う<span class="sub">タップして画像を選択</span></span>
+            <input type="file" id="bgUploadInput" accept="image/*">
+          </label>
+        </div>
+        <div class="block">
+          <div class="section-label"><span class="jp">降らせるもの</span><span class="en">Schnee &amp; Glitzer</span></div>
+          <p class="mini-note">動きの見本つき。選ぶとドームの中がそれに入れ替わって舞い上がります。</p>
+          <div class="particle-groups" id="particleGrid"></div>
+          <div class="amount-row">
+            <span class="amount-title">量</span>
+            <input type="range" id="particleAmount" min="1000" max="24000" step="500" value="14000" aria-label="降らせるものの量">
+            <span class="amount-label" id="particleAmountLabel">たっぷり</span>
+          </div>
+        </div>
+        <div class="block">
+          <div class="section-label"><span class="jp">積もる雪の色</span><span class="en">Schneedecke</span></div>
+          <div class="theme-row" id="groundSelector"></div>
+        </div>
+        <div class="block">
+          <div class="section-label"><span class="jp">水の色</span><span class="en">Wasser</span></div>
+          <div class="theme-row" id="waterSelector"></div>
+        </div>
+        <div class="block">
+          <div class="section-label"><span class="jp">飾る場所</span><span class="en">Umgebung</span></div>
+          <div class="theme-row" id="outsideSelector"></div>
+        </div>
+      </section>
+
+      <!-- III 器 -->
+      <section class="step-pane" data-pane="globe">
+        <div class="block">
+          <div class="section-label"><span class="jp">かたち</span><span class="en">Form</span></div>
+          <div class="shape-selector" id="shapeSelector"></div>
+        </div>
+        <div class="block">
+          <div class="section-label"><span class="jp">台座</span><span class="en">Sockel</span></div>
+          <div class="base-selector" id="baseThemes"></div>
+        </div>
+        <div class="block">
+          <div class="section-label"><span class="jp">ガラス縁</span><span class="en">Rahmen</span></div>
+          <div class="glass-selector" id="glassThemes"></div>
+        </div>
+      </section>
+
+      <!-- IV 刻印 -->
+      <section class="step-pane" data-pane="gravur">
+        <div class="block">
+          <div class="section-label"><span class="jp">台座に刻む</span><span class="en">Gravur</span></div>
+          <div class="form-group light">
+            <label for="engName">お名前・タイトル</label>
+            <input type="text" id="engName" maxlength="20" placeholder="例：Mein Weihnachtsmarkt">
+          </div>
+          <div class="form-group light">
+            <label for="engMsg">メッセージ</label>
+            <input type="text" id="engMsg" maxlength="26" placeholder="例：Frohe Weihnachten 2026">
+          </div>
+          <p class="mini-note">台座の銘板に金文字で入ります。エディションNo.もつきます。</p>
+        </div>
+        <div class="block">
+          <div class="section-label"><span class="jp">オルゴール</span><span class="en">Spieluhr</span></div>
+          <button type="button" class="musicbox-btn" id="musicBoxBtn" aria-pressed="false">
+            <span class="ic">♪</span><span class="lbl">オルゴールを鳴らす</span>
+          </button>
+          <p class="mini-note">中身がゆっくり回って「きよしこの夜」が流れます。</p>
+        </div>
+      </section>
+
+      <!-- できたら -->
+      <div class="block">
+        <div class="section-label">
+          <span class="jp">できあがったら</span>
+          <span class="en">Fertig</span>
+        </div>
+        <div class="action-stack">
+          <button class="btn btn-primary" id="btnPostContest">
+            <span class="label-en">Galerie</span>
+            <span class="divider"></span>
+            <span>ギャラリーに追加</span>
+          </button>
+          <button class="btn" id="btnDownload">⬇ 画像をダウンロード</button>
+          <button class="btn" id="btnShareX">𝕏 でシェア</button>
+          <button class="btn" id="btnShareLine">LINE でシェア</button>
+          <a class="btn btn-ghost" href="gallery.html">🖼 みんなの作品を見る</a>
+        </div>
+      </div>
+
+    </aside>
+  </div>
+</main>
+
+<div class="page-next">
+  <span class="hint">できあがったら</span>
+  <a href="gallery.html" class="btn btn-primary">みんなのギャラリーへ →</a>
+</div>
+
+<!-- ギャラリー追加モーダル -->
+<div class="modal-overlay" id="contestModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeContestModal()">×</button>
+    <h2>ギャラリーに追加</h2>
+    <p class="modal-sub">Deine Schneekugel teilen</p>
+    <img id="contestPreview" style="width: 100%; border-radius: var(--radius-sm); margin-bottom: 16px; background:#06102e;" alt="プレビュー">
+    <div class="form-group">
+      <label>ニックネーム <span style="color:var(--tcm-red)">*</span></label>
+      <input type="text" id="contestName" maxlength="20" placeholder="例：クリスマス好きさん">
+    </div>
+    <div class="form-group">
+      <label>コメント（任意）</label>
+      <textarea id="contestComment" rows="3" maxlength="140" placeholder="作品のタイトルや想いを..."></textarea>
+    </div>
+    <div class="form-group" style="font-size: 11px;">
+      <label style="display: flex; gap: 8px; align-items: flex-start; cursor: pointer; letter-spacing: 0;">
+        <input type="checkbox" id="contestConsent" style="width: auto; margin-top: 3px;">
+        <span>作品を東京クリスマスマーケット公式のSNS・サイトで紹介することに同意します。公序良俗に反する作品は非掲載となります。</span>
+      </label>
+    </div>
+    <div style="display: flex; gap: 10px; margin-top: 20px;">
+      <button class="btn btn-ghost" onclick="closeContestModal()" style="flex: 1; background: var(--bg-panel-sub); color: var(--text-dark); border-color: var(--border-dark);">キャンセル</button>
+      <button class="btn btn-primary" id="btnSubmitContest" onclick="submitContest()" style="flex: 2;">ギャラリーに追加</button>
+    </div>
+  </div>
+</div>
+
+<!-- 追加できたときのモーダル -->
+<div class="modal-overlay" id="postSuccessModal">
+  <div class="modal" style="text-align: center;">
+    <button class="modal-close" onclick="closePostSuccess()">×</button>
+    <div style="font-size: 48px; color: var(--tcm-gold);">❄</div>
+    <h2 style="margin-top: 8px;">Vielen Dank!</h2>
+    <p class="modal-sub">ギャラリーに追加しました</p>
+    <p style="color: var(--text-dark);">作品は事務局で確認したあと、ギャラリーに掲載されます。<br>掲載されたらSNSでシェアして、たくさんの「いいね」をもらおう！</p>
+    <p style="margin-top: 16px; font-size: 12px; color: var(--text-dark-dim);">
+      あなたの作品URL：<br>
+      <a id="postShareUrl" href="#" style="color: var(--tcm-gold-dark); word-break: break-all;"></a>
+    </p>
+    <div style="display: flex; gap: 10px; margin-top: 24px; justify-content: center;">
+      <button class="btn" onclick="sharePostToX()">𝕏 でシェア</button>
+      <a class="btn btn-primary" href="gallery.html">
+        <span>ギャラリーへ</span>
+      </a>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<footer class="site-footer">
+  Tokyo Christmas Market 2026 — Snow Globe Maker
+</footer>
+
+<script src="js/config.js"></script>
+<script src="js/dome-shapes.js"></script>
+<script src="js/parts-catalog.js"></script>
+<script src="js/particle-effect.js"></script>
+<script src="js/export.js"></script>
+<script src="js/share.js"></script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+<script type="module" src="js/maker.js"></script>
+<script>
+</script>
+
+</body>
+</html>
