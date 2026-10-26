@@ -27,7 +27,7 @@ const CONFIG = {
 };
 
 const STATUS = ['pending', 'approved', 'rejected'];
-const COL = { id: 1, timestamp: 2, name: 3, comment: 4, fileId: 5, imageUrl: 6, status: 7, likes: 8, ua: 9 };
+const COL = { id: 1, timestamp: 2, name: 3, comment: 4, fileId: 5, imageUrl: 6, status: 7, likes: 8, ua: 9, note: 10 };
 
 // ───────── エントリポイント ─────────
 function doPost(e) {
@@ -62,6 +62,7 @@ function _submitPost(p) {
   const comment = _clean(p.comment, 140);
   const ua = _clean(p.ua, 200);
   const client = _clean(p.client, 64);
+  const custom = String(p.custom || '') === '1';   // 自作パーツ入り＝承認時に要確認
   const dataUrl = String(p.image || '');
 
   if (!name) return _json({ ok: false, error: 'ニックネームを入力してください' });
@@ -101,6 +102,7 @@ function _submitPost(p) {
     _getSheet(CONFIG.SHEET_NAME).appendRow([
       id, now, _sheetText(name), _sheetText(comment), fileId, imageUrl,
       CONFIG.AUTO_APPROVE ? 'approved' : 'pending', 0, _sheetText(ua),
+      custom ? '要確認（自作パーツ入り）' : '',
     ]);
   } finally {
     lock.releaseLock();
@@ -204,7 +206,7 @@ function _getSheet(name) {
   let sh = ss.getSheetByName(name);
   if (!sh) {
     sh = ss.insertSheet(name);
-    sh.appendRow(['id', 'timestamp', 'name', 'comment', 'fileId', 'imageUrl', 'status', 'likes', 'ua']);
+    sh.appendRow(['id', 'timestamp', 'name', 'comment', 'fileId', 'imageUrl', 'status', 'likes', 'ua', 'note']);
     sh.setFrozenRows(1);
   }
   return sh;

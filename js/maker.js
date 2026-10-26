@@ -16,7 +16,7 @@ const State = {
 
 // パーツのカテゴリ（画像が入っているものだけ表示）
 const PART_CATEGORIES = [
-  ['tcmChara', '★くしゅまる'], ['tcm', '★TCMマーケット'], ['tcmMug', '★マグ（緑）'], ['tcmMugRed', '★マグ（赤）'], ['tcmMugNavy', '★マグ（紺）'], ['apaman', 'べあ～君＆ハニちゃん'], ['characters', 'キャラ'], ['porcelain', '磁器コレクション'], ['animals', 'どうぶつ'], ['people', 'ひと'], ['objects', 'オブジェ'],
+  ['mine', '＋ じぶんのパーツ'], ['tcmChara', '★くしゅまる'], ['tcm', '★TCMマーケット'], ['tcmMug', '★マグ（緑）'], ['tcmMugRed', '★マグ（赤）'], ['tcmMugNavy', '★マグ（紺）'], ['apaman', 'べあ～君＆ハニちゃん'], ['characters', 'キャラ'], ['porcelain', '磁器コレクション'], ['animals', 'どうぶつ'], ['people', 'ひと'], ['objects', 'オブジェ'],
   ['buildings', '街と乗り物'], ['nature', '木と自然'], ['food', '食べもの'], ['toys', '雑貨・おもちゃ'], ['decorations', 'デコ'],
 ];
 
@@ -47,6 +47,16 @@ function init() {
   if (State.background === 'none') globe.setBackground({ none: true });
   else setBackground(PARTS_CATALOG.backgrounds.find((b) => b.id === State.background));
   document.body.classList.add('globe-ready');
+
+  // じぶんのパーツ（端末に保存したもの）を読み込んで、画像選択を受ける
+  MyParts.syncCatalog();
+  refreshMineChip();
+  const fileInput = document.getElementById('myPartFile');
+  fileInput.addEventListener('change', () => {
+    const f = fileInput.files && fileInput.files[0];
+    fileInput.value = '';
+    if (f) MyParts.open(f, () => { refreshMineChip(); renderPartsGrid('mine'); });
+  });
 }
 
 // 最初はからっぽ。パーツはすべてお客さんに選んでもらう
@@ -247,12 +257,12 @@ const ParticlePreview = (() => {
 function initPartsPanel() {
   const wrap = document.getElementById('partCats');
   wrap.innerHTML = '';
-  PART_CATEGORIES.filter(([k]) => (PARTS_CATALOG[k] || []).length).forEach(([k, label], i) => {
+  PART_CATEGORIES.filter(([k]) => k === 'mine' || (PARTS_CATALOG[k] || []).length).forEach(([k, label]) => {
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'cat-chip' + (i === 0 ? ' active' : '');
+    b.className = 'cat-chip' + (k === 'tcmChara' ? ' active' : '') + (k === 'mine' ? ' mine' : '');
     b.dataset.cat = k;
-    b.innerHTML = `${label}<span class="n">${PARTS_CATALOG[k].length}</span>`;
+    b.innerHTML = `${label}<span class="n">${(PARTS_CATALOG[k] || []).length}</span>`;
     b.addEventListener('click', () => {
       wrap.querySelectorAll('.cat-chip').forEach((x) => x.classList.toggle('active', x === b));
       renderPartsGrid(k);
@@ -356,6 +366,16 @@ const MusicBox = (() => {
 function renderPartsGrid(cat) {
   const grid = document.getElementById('partsGrid');
   grid.innerHTML = '';
+
+  if (cat === 'mine') {
+    const add = document.createElement('button');
+    add.type = 'button';
+    add.className = 'part-tile add-tile';
+    add.innerHTML = '<div class="thumb"><span class="plus">＋</span></div><div class="label">画像から作る</div>';
+    add.addEventListener('click', () => document.getElementById('myPartFile').click());
+    grid.appendChild(add);
+  }
+
   (PARTS_CATALOG[cat] || []).forEach((p) => {
     const el = document.createElement('button');
     el.type = 'button';
@@ -369,8 +389,28 @@ function renderPartsGrid(cat) {
         document.getElementById('stage').scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     });
+    if (p.custom) {
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'tile-del';
+      del.title = '削除';
+      del.textContent = '×';
+      del.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        MyParts.remove(p.id);
+        refreshMineChip();
+        renderPartsGrid('mine');
+      });
+      el.appendChild(del);
+    }
     grid.appendChild(el);
   });
+}
+
+// じぶんのパーツの個数表示を更新する
+function refreshMineChip() {
+  const chip = document.querySelector('.cat-chip[data-cat="mine"] .n');
+  if (chip) chip.textContent = (PARTS_CATALOG.mine || []).length;
 }
 
 // ───────── 選択中パーツのツールバー ─────────

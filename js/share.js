@@ -73,6 +73,9 @@ async function submitContest() {
     body.append('comment', comment);
     body.append('image', dataUrl); // dataURL のまま送信
     body.append('ua', navigator.userAgent);
+    // 自作パーツを使っているかどうか（承認するときに気づけるように）
+    const usesCustom = window.globe && [...window.globe.parts.values()].some((p) => p.cat && p.cat.custom);
+    body.append('custom', usesCustom ? '1' : '');
     body.append('client', _snowdomeClientId());
 
     if (!CONFIG.GAS_WEBAPP_URL || CONFIG.GAS_WEBAPP_URL.includes('REPLACE_WITH')) { throw new Error('ギャラリーへの追加は準備中です'); }

@@ -851,3 +851,66 @@ button.particle-card {
   letter-spacing: 0.02em;
 }
 .ng-note::before { content: "⚠ "; }
+
+/* ───────── じぶんのパーツ ───────── */
+.cat-chip.mine { border-color: var(--border-gold-strong); }
+
+.part-tile.add-tile .thumb {
+  display: flex; align-items: center; justify-content: center;
+  border: 1px dashed var(--border-gold); background: rgba(201, 166, 107, 0.08);
+}
+.part-tile.add-tile .plus { font-size: 26px; color: var(--tcm-gold-dark); line-height: 1; }
+
+.part-tile { position: relative; }
+.part-tile .tile-del {
+  position: absolute; top: 2px; right: 2px;
+  width: 20px; height: 20px; line-height: 1;
+  border: 1px solid var(--border-dark); border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92); color: var(--text-dark-dim);
+  font-size: 13px; cursor: pointer; padding: 0;
+}
+.part-tile .tile-del:hover { background: var(--tcm-red); border-color: var(--tcm-red); color: #fff; }
+
+/* 編集モーダル */
+.mypart-modal { max-width: 440px; }
+.mp-stage {
+  margin: 4px 0 14px;
+  padding: 10px;
+  border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  /* 透明なところが分かるよう市松模様にする */
+  background-color: #fff;
+  background-image:
+    linear-gradient(45deg, #e4e4e4 25%, transparent 25%, transparent 75%, #e4e4e4 75%),
+    linear-gradient(45deg, #e4e4e4 25%, transparent 25%, transparent 75%, #e4e4e4 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 8px 8px;
+}
+.mp-stage canvas {
+  max-width: 100%; max-height: 260px;
+  touch-action: none; cursor: crosshair;
+  image-rendering: auto;
+}
+.mp-row {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 10px;
+  font-size: 12px; color: var(--text-dark);
+}
+.mp-row label, .mp-row .mp-label { white-space: nowrap; }
+.mp-row input[type="range"] { flex: 1; min-width: 60px; accent-color: var(--tcm-gold-dark); }
+.mp-tools { display: flex; gap: 4px; }
+.mp-tool {
+  padding: 5px 12px; font-size: 12px; cursor: pointer;
+  border: 1px solid var(--border-gold); border-radius: var(--radius-pill);
+  background: transparent; color: var(--text-dark); font-family: var(--font-sans);
+}
+.mp-tool.active { background: var(--tcm-navy); border-color: var(--tcm-navy); color: var(--tcm-cream); }
+.mp-note {
+  margin: 2px 0 14px;
+  font-size: 11px; line-height: 1.7; color: var(--text-dark-dim);
+}
+
+@media (max-width: 480px) {
+  .mp-stage canvas { max-height: 200px; }
+  .mp-row { flex-wrap: wrap; gap: 8px; }
+}
